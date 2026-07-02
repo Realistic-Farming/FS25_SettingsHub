@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="92">
+    <author>TisonK</author>
+    <version>1.0.0.0</version>
+    <modName>FS25_SettingsHub</modName>
+
+    <title>
+        <en><![CDATA[Realistic Farming - Settings Hub]]></en>
+        <de><![CDATA[Realistic Farming - Settings Hub]]></de>
+        <fr><![CDATA[Realistic Farming - Settings Hub]]></fr>
+        <nl><![CDATA[Realistic Farming - Settings Hub]]></nl>
+        <it><![CDATA[Realistic Farming - Settings Hub]]></it>
+        <pl><![CDATA[Realistic Farming - Settings Hub]]></pl>
+        <es><![CDATA[Realistic Farming - Settings Hub]]></es>
+        <ea><![CDATA[Realistic Farming - Settings Hub]]></ea>
+        <pt><![CDATA[Realistic Farming - Settings Hub]]></pt>
+        <br><![CDATA[Realistic Farming - Settings Hub]]></br>
+        <ru><![CDATA[Realistic Farming - Settings Hub]]></ru>
+        <uk><![CDATA[Realistic Farming - Settings Hub]]></uk>
+        <cz><![CDATA[Realistic Farming - Settings Hub]]></cz>
+        <hu><![CDATA[Realistic Farming - Settings Hub]]></hu>
+        <ro><![CDATA[Realistic Farming - Settings Hub]]></ro>
+        <tr><![CDATA[Realistic Farming - Settings Hub]]></tr>
+        <fi><![CDATA[Realistic Farming - Settings Hub]]></fi>
+        <no><![CDATA[Realistic Farming - Settings Hub]]></no>
+        <sv><![CDATA[Realistic Farming - Settings Hub]]></sv>
+        <da><![CDATA[Realistic Farming - Settings Hub]]></da>
+        <kr><![CDATA[Realistic Farming - Settings Hub]]></kr>
+        <jp><![CDATA[Realistic Farming - Settings Hub]]></jp>
+        <ct><![CDATA[Realistic Farming - Settings Hub]]></ct>
+        <fc><![CDATA[Realistic Farming - Settings Hub]]></fc>
+        <id><![CDATA[Realistic Farming - Settings Hub]]></id>
+        <vi><![CDATA[Realistic Farming - Settings Hub]]></vi>
+    </title>
+
+    <description>
+        <en><![CDATA[Required library for the Realistic Farming mod ecosystem. Gathers every companion mod's settings in one place and applies heavy setting changes smoothly in the background, so moving a slider never freezes the game. Admin settings sync to all players in multiplayer. Install it and let it run.]]></en>
+        <de><![CDATA[Erforderliche Bibliothek für das Realistic Farming Mod-Ökosystem. Sammelt die Einstellungen aller Begleitmods an einem Ort und wendet aufwändige Änderungen ruhig im Hintergrund an, sodass ein Schieberegler das Spiel nie einfriert. Admin-Einstellungen werden im Mehrspieler synchronisiert.]]></de>
+        <fr><![CDATA[Bibliothèque requise pour l'écosystème de mods Realistic Farming. Rassemble les réglages de tous les mods compagnons au même endroit et applique les changements lourds en douceur en arrière-plan, pour qu'un curseur ne fige jamais le jeu. Les réglages admin se synchronisent en multijoueur.]]></fr>
+        <nl><![CDATA[Vereiste bibliotheek voor het Realistic Farming mod-ecosysteem. Verzamelt de instellingen van alle bijbehorende mods op één plek en past zware wijzigingen rustig op de achtergrond toe, zodat een schuifregelaar het spel nooit bevriest. Admin-instellingen synchroniseren in multiplayer.]]></nl>
+        <it><![CDATA[Libreria richiesta per l'ecosistema di mod Realistic Farming. Raccoglie le impostazioni di ogni mod compagno in un unico posto e applica le modifiche pesanti in modo fluido in background, così uno slider non blocca mai il gioco. Le impostazioni admin si sincronizzano in multigiocatore.]]></it>
+        <pl><![CDATA[Wymagana biblioteka dla ekosystemu modów Realistic Farming. Zbiera ustawienia wszystkich modów towarzyszących w jednym miejscu i stosuje ciężkie zmiany płynnie w tle, więc suwak nigdy nie zawiesza gry. Ustawienia administratora synchronizują się w trybie wieloosobowym.]]></pl>
+        <es><![CDATA[Biblioteca requerida para el ecosistema de mods Realistic Farming. Reúne los ajustes de cada mod compañero en un solo lugar y aplica los cambios pesados con suavidad en segundo plano, para que un deslizador nunca congele el juego. Los ajustes de admin se sincronizan en multijugador.]]></es>
+        <ea><![CDATA[Biblioteca requerida para el ecosistema de mods Realistic Farming. Reúne los ajustes de cada mod compañero en un solo lugar y aplica los cambios pesados con suavidad en segundo plano, para que un deslizador nunca congele el juego. Los ajustes de admin se sincronizan en multijugador.]]></ea>
+        <pt><![CDATA[Biblioteca necessária para o ecossistema de mods Realistic Farming. Reúne as configurações de cada mod companheiro em um só lugar e aplica mudanças pesadas suavemente em segundo plano, para que um controle deslizante nunca congele o jogo. Configurações de admin sincronizam no multijogador.]]></pt>
+        <br><![CDATA[Biblioteca necessária para o ecossistema de mods Realistic Farming. Reúne as configurações de cada mod companheiro em um só lugar e aplica mudanças pesadas suavemente em segundo plano, para que um controle deslizante nunca congele o jogo. Configurações de admin sincronizam no multijogador.]]></br>
+        <ru><![CDATA[Необходимая библиотека для экосистемы модов Realistic Farming. Собирает настройки всех сопутствующих модов в одном месте и плавно применяет тяжёлые изменения в фоне, чтобы ползунок никогда не подвешивал игру. Админ-настройки синхронизируются в мультиплеере.]]></ru>
+        <uk><![CDATA[Необхідна бібліотека для екосистеми модів Realistic Farming. Збирає налаштування всіх супутніх модів в одному місці та плавно застосовує важкі зміни у фоні, щоб повзунок ніколи не підвішував гру. Адмін-налаштування синхронізуються в мультиплеєрі.]]></uk>
+        <cz><![CDATA[Vyžadovaná knihovna pro ekosystém modů Realistic Farming. Shromažďuje nastavení všech doprovodných modů na jednom místě a náročné změny plynule aplikuje na pozadí, takže posuvník nikdy nezmrazí hru. Nastavení správce se synchronizují ve více hráčích.]]></cz>
+        <hu><![CDATA[Szükséges könyvtár a Realistic Farming mod-ökoszisztémához. Egy helyre gyűjti minden társmod beállításait, és a nehéz változtatásokat simán, a háttérben alkalmazza, így egy csúszka soha nem fagyasztja le a játékot. Az admin beállítások szinkronizálódnak többjátékos módban.]]></hu>
+        <ro><![CDATA[Bibliotecă necesară pentru ecosistemul de moduri Realistic Farming. Adună setările fiecărui mod însoțitor într-un singur loc și aplică modificările grele lin, în fundal, astfel încât un glisor să nu blocheze niciodată jocul. Setările de administrator se sincronizează în multiplayer.]]></ro>
+        <tr><![CDATA[Realistic Farming mod ekosistemi için gerekli kütüphane. Her yardımcı modun ayarlarını tek bir yerde toplar ve ağır değişiklikleri arka planda akıcı şekilde uygular, böylece bir kaydırıcı oyunu asla dondurmaz. Yönetici ayarları çok oyuncuda senkronize olur.]]></tr>
+        <fi><![CDATA[Realistic Farming -modiekosysteemin vaatima kirjasto. Kokoaa kaikkien liitännäismodien asetukset yhteen paikkaan ja soveltaa raskaat muutokset sujuvasti taustalla, joten liukusäädin ei koskaan jäädytä peliä. Ylläpitäjän asetukset synkronoituvat moninpelissä.]]></fi>
+        <no><![CDATA[Nødvendig bibliotek for Realistic Farming-modøkosystemet. Samler innstillingene til hver tilhørende mod på ett sted og bruker tunge endringer jevnt i bakgrunnen, så en glidebryter aldri fryser spillet. Admin-innstillinger synkroniseres i flerspiller.]]></no>
+        <sv><![CDATA[Obligatoriskt bibliotek för Realistic Farming-modekosystemet. Samlar varje följemodds inställningar på ett ställe och tillämpar tunga ändringar mjukt i bakgrunden, så att ett reglage aldrig fryser spelet. Admininställningar synkroniseras i flerspelarläge.]]></sv>
+        <da><![CDATA[Påkrævet bibliotek til Realistic Farming-mod-økosystemet. Samler hver ledsagermods indstillinger ét sted og anvender tunge ændringer jævnt i baggrunden, så en skyder aldrig fryser spillet. Admin-indstillinger synkroniseres i multiplayer.]]></da>
+        <kr><![CDATA[Realistic Farming 모드 생태계에 필요한 라이브러리입니다. 모든 동반 모드의 설정을 한곳에 모으고 무거운 변경을 백그라운드에서 부드럽게 적용하여 슬라이더가 게임을 멈추지 않게 합니다. 관리자 설정은 멀티플레이어에서 동기화됩니다.]]></kr>
+        <jp><![CDATA[Realistic Farming モッドエコシステムに必要なライブラリです。各関連モッドの設定を一か所にまとめ、重い変更をバックグラウンドで滑らかに適用するので、スライダーがゲームを固まらせません。管理者設定はマルチプレイヤーで同期します。]]></jp>
+        <ct><![CDATA[Realistic Farming 模組生態系所需的函式庫。將每個配套模組的設定集中在一處，並在背景平順套用繁重的變更，讓拉桿永遠不會卡住遊戲。管理員設定會在多人連線中同步。]]></ct>
+        <fc><![CDATA[Realistic Farming 模组生态系统所需的库。将每个配套模组的设置集中在一处，并在后台平顺应用繁重的更改，让滑块永远不会卡住游戏。管理员设置会在多人联机中同步。]]></fc>
+        <id><![CDATA[Pustaka yang diperlukan untuk ekosistem mod Realistic Farming. Mengumpulkan pengaturan setiap mod pendamping di satu tempat dan menerapkan perubahan berat dengan mulus di latar belakang, sehingga penggeser tidak pernah membekukan game. Pengaturan admin tersinkron di multipemain.]]></id>
+        <vi><![CDATA[Thư viện bắt buộc cho hệ sinh thái mod Realistic Farming. Gom cài đặt của mọi mod đồng hành về một nơi và áp dụng các thay đổi nặng mượt mà ở nền, để thanh trượt không bao giờ làm treo game. Cài đặt quản trị đồng bộ khi chơi mạng.]]></vi>
+    </description>
+
+    <iconFilename>icon.dds</iconFilename>
+
+    <multiplayer supported="true"/>
+
+    <dependencies>
+        <dependency>FS25_StateLedger</dependency>
+        <dependency>FS25_NetworkSync</dependency>
+    </dependencies>
+
+    <extraSourceFiles>
+        <sourceFile filename="main.lua" />
+    </extraSourceFiles>
+</modDesc>
