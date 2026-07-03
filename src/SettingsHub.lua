@@ -88,7 +88,14 @@ function SettingsHub:registerModule(modId, spec)
         SHLogger.warning("registerModule('%s'): needs { adminSettings = {..}, onChange = fn }", modId); return false
     end
 
-    local mod = { order = {}, defs = {}, values = {}, onChange = spec.onChange }
+    -- selfPersisted: the companion owns its own save file and loads its own values
+    -- before it registers. For such a module the hub must NOT restore its own stale
+    -- stored copy over the freshly-registered value, nor replay it back through onChange
+    -- on load - doing so clobbered the companion's real setting every load (the
+    -- SoilFertilizer master `enabled` reset-to-false bug). The hub then acts as a
+    -- display mirror + live-edit forwarder only; the companion remains source of truth.
+    local mod = { order = {}, defs = {}, values = {}, onChange = spec.onChange,
+                  selfPersisted = spec.selfPersisted == true }
     for _, def in ipairs(spec.adminSettings) do
         if type(def) == "table" and type(def.id) == "string" then
             def.adminOnly = def.adminOnly == true
@@ -109,14 +116,19 @@ function SettingsHub:registerModule(modId, spec)
     local restoredLocal = self.savedLocal[modId]
     for _, id in ipairs(mod.order) do
         local def = mod.defs[id]
-        local restored = def.adminOnly and (restoredAdmin and restoredAdmin[id])
-                      or (not def.adminOnly and (restoredLocal and restoredLocal[id]))
-        if restored ~= nil then
-            local v = self:_validate(def, restored)
-            if v ~= nil then mod.values[id] = v end
+        -- Self-persisted companions keep the value they just registered (their own load
+        -- already ran); skip the hub restore + apply-on-load replay entirely so a stale
+        -- hub copy can never overwrite the companion's real setting.
+        if not mod.selfPersisted then
+            local restored = def.adminOnly and (restoredAdmin and restoredAdmin[id])
+                          or (not def.adminOnly and (restoredLocal and restoredLocal[id]))
+            if restored ~= nil then
+                local v = self:_validate(def, restored)
+                if v ~= nil then mod.values[id] = v end
+            end
+            -- apply-on-load: queue the current value so the companion applies it
+            self:_queue(modId, id, mod.values[id], nil)
         end
-        -- apply-on-load: queue the current value so the companion applies it
-        self:_queue(modId, id, mod.values[id], nil)
     end
 
     self:_bindBedrock()
