@@ -20,6 +20,7 @@ local modDirectory = g_currentModDirectory
 
 source(modDirectory .. "src/Logger.lua")
 source(modDirectory .. "src/SettingsHubAdminEvent.lua")
+source(modDirectory .. "src/AdminControlRegistry.lua")
 source(modDirectory .. "src/SettingsHub.lua")
 
 local settingsHub = SettingsHub.new()
@@ -67,4 +68,6 @@ end
 if addConsoleCommand ~= nil then
     addConsoleCommand("shStatus", "Show SettingsHub registered modules and queue",
         "consoleCommandStatus", settingsHub)
+    addConsoleCommand("shRegistryStatus", "Show Admin Control Registry declared controls",
+        "consoleCommandStatus", settingsHub.registry)
 end

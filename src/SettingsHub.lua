@@ -43,6 +43,9 @@ function SettingsHub.new()
     self.localLoaded   = false
     self.bedrockBound  = false
 
+    -- Admin Control Registry (API-8) rides inside the hub as an extension.
+    self.registry = AdminControlRegistry.new(self)
+
     return self
 end
 
@@ -109,6 +112,14 @@ function SettingsHub:registerModule(modId, spec)
 
     if self.modules[modId] == nil then table.insert(self.registerOrder, modId) end
     self.modules[modId] = mod
+
+    -- Admin Control Registry (API-8): capture any declared administrative controls.
+    -- Additive and backward compatible - existing callers pass no adminControls and
+    -- are unaffected. The ack is the affirmative acknowledgement an adopter must hold
+    -- before it retires its own local rendering (brief section 7).
+    if type(spec.adminControls) == "table" and self.registry ~= nil then
+        mod.controlAck = self.registry:register(modId, spec.adminControls)
+    end
 
     -- Apply any values restored before this module registered (load is
     -- order-independent: StateLedger / the local file may arrive first).
@@ -430,6 +441,27 @@ function SettingsHub:onMissionLoaded()
         self:loadLocalFile()
     end
     self:_bindBedrock()
+    if self.registry ~= nil then
+        self.registry:onMissionLoaded()   -- register the creative flag + bind the invoke action
+    end
+end
+
+-- =========================================================
+-- Admin Control Registry (API-8) accessors for adopters
+-- =========================================================
+
+-- The single registry instance. Adopters check
+-- reg.CAPABILITY_VERSION before relying on it (a capability handle).
+function SettingsHub:getRegistry()
+    return self.registry
+end
+
+-- The affirmative registration acknowledgement for a module's declared controls,
+-- or nil if the module declared none. An adopter must not retire its own local
+-- rendering until this returns an ack with ok == true.
+function SettingsHub:getControlAck(modId)
+    local mod = self.modules[modId]
+    return mod ~= nil and mod.controlAck or nil
 end
 
 function SettingsHub:consoleCommandStatus()
