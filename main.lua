@@ -21,6 +21,8 @@ local modDirectory = g_currentModDirectory
 source(modDirectory .. "src/Logger.lua")
 source(modDirectory .. "src/SettingsHubAdminEvent.lua")
 source(modDirectory .. "src/AdminControlRegistry.lua")
+source(modDirectory .. "src/OptionScalingResolver.lua")
+source(modDirectory .. "src/OptionScalingSpine.lua")
 source(modDirectory .. "src/SettingsHub.lua")
 
 local settingsHub = SettingsHub.new()
@@ -70,4 +72,6 @@ if addConsoleCommand ~= nil then
         "consoleCommandStatus", settingsHub)
     addConsoleCommand("shRegistryStatus", "Show Admin Control Registry declared controls",
         "consoleCommandStatus", settingsHub.registry)
+    addConsoleCommand("shSpine", "Show Option-Scaling Spine profile (dials, switches, preset)",
+        "consoleCommandStatus", settingsHub.spine)
 end

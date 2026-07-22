@@ -46,6 +46,10 @@ function SettingsHub.new()
     -- Admin Control Registry (API-8) rides inside the hub as an extension.
     self.registry = AdminControlRegistry.new(self)
 
+    -- Option-Scaling Spine (Authority #1): the difficulty profile rides inside
+    -- the hub as one admin module; the resolver is a bundled pure library.
+    self.spine = OptionScalingSpine.new(self)
+
     return self
 end
 
@@ -443,6 +447,9 @@ function SettingsHub:onMissionLoaded()
     self:_bindBedrock()
     if self.registry ~= nil then
         self.registry:onMissionLoaded()   -- register the creative flag + bind the invoke action
+    end
+    if self.spine ~= nil then
+        self.spine:onMissionLoaded()      -- register the seven-dial difficulty profile
     end
 end
 
