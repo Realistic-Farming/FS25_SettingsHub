@@ -108,3 +108,32 @@ T.near("cascade tablet ON",  R.resolve(tablet, bioOn), 2.0, 1e-9)
 T.near("cascade disease neutral when Biological OFF", R.resolve(disease, bioOff), 1.0, 1e-9)
 T.near("cascade dog neutral when Biological OFF",     R.resolve(dog, bioOff), 1.0, 1e-9)
 T.near("cascade tablet neutral when Biological OFF",  R.resolve(tablet, bioOff), 1.0, 1e-9)
+
+-- ── canonical dial curves (ratio pass v0.2) ──────────────────
+-- Every dial has a curve, neutral (at1) is exactly 1.0, and a declaration with
+-- no curve of its own resolves through the dial's canonical curve.
+do
+  local allDials = { "economy", "labor", "agronomy", "biological", "livestock", "worldEvents", "community" }
+  local allHaveCurves, allNeutralAt1 = true, true
+  for _, d in ipairs(allDials) do
+    local c = R.dialCurve(d)
+    if type(c) ~= "table" then allHaveCurves = false
+    elseif math.abs(c.at1 - 1.0) > 1e-9 then allNeutralAt1 = false end
+  end
+  T.ok("all seven dials have a canonical curve", allHaveCurves)
+  T.ok("every dial is identity (1.0) at Standard", allNeutralAt1)
+end
+
+-- Economy 0.4 / 1.0 / 1.8 applied through the canonical curve (no decl curve).
+local econ = { id = "e", dial = "economy", base = 100.0 }
+T.near("economy canonical at Relaxed (dial 0)",  R.resolve(econ, profile({ economy = 0.0 }, { economy = true })), 40.0,  1e-6)
+T.near("economy canonical at Standard (dial 1)", R.resolve(econ, profile({ economy = 1.0 }, { economy = true })), 100.0, 1e-6)
+T.near("economy canonical at Punishing (dial 2)",R.resolve(econ, profile({ economy = 2.0 }, { economy = true })), 180.0, 1e-6)
+
+-- Community is the tightest dial (0.8 / 1.0 / 1.3).
+local comm = { id = "c2", dial = "community", base = 100.0 }
+T.near("community canonical at Punishing = 130", R.resolve(comm, profile({ community = 2.0 }, { community = true })), 130.0, 1e-6)
+
+-- A decl with its OWN curve overrides the canonical one.
+local ownCurve = { id = "o", dial = "economy", base = 100.0, curve = { at0 = 1.0, at1 = 1.0, at2 = 1.0 } }
+T.near("declared curve overrides canonical", R.resolve(ownCurve, profile({ economy = 2.0 }, { economy = true })), 100.0, 1e-6)

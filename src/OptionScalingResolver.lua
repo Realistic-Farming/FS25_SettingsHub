@@ -54,6 +54,28 @@ OptionScalingResolver.INTENSITY_MIN     = 0.0
 OptionScalingResolver.INTENSITY_MAX     = 2.0
 OptionScalingResolver.INTENSITY_NEUTRAL = 1.0
 
+-- The CANONICAL curve per dial, filled by the ratio pass (BACKLOG-20 v0.2,
+-- 2026-07-22, Arissani + ClaudeA). Written directly on this framework's 0..2
+-- intensity axis: at0 at dial 0 (Relaxed), at1 = 1.0 at dial 1 (Standard =
+-- neutral = identity), at2 at dial 2 (Punishing). A consumer that declares a
+-- value on a dial without supplying its own curve gets the dial's canonical
+-- curve. These anchors are balance and belong to the ratio pass; the framework
+-- only carries them so every consumer scales the dial the same way.
+OptionScalingResolver.DIAL_CURVES = {
+    economy     = { at0 = 0.4, at1 = 1.0, at2 = 1.8 },
+    labor       = { at0 = 0.6, at1 = 1.0, at2 = 1.5 },
+    agronomy    = { at0 = 0.7, at1 = 1.0, at2 = 1.4 },
+    biological  = { at0 = 0.5, at1 = 1.0, at2 = 1.6 },
+    livestock   = { at0 = 0.5, at1 = 1.0, at2 = 1.6 },
+    worldEvents = { at0 = 0.4, at1 = 1.0, at2 = 1.7 },
+    community   = { at0 = 0.8, at1 = 1.0, at2 = 1.3 },
+}
+
+-- The canonical curve for a dial, or nil for an unknown dial.
+function OptionScalingResolver.dialCurve(dial)
+    return OptionScalingResolver.DIAL_CURVES[dial]
+end
+
 -- Value-key builders, so the writer and readers never hand-type a key.
 function OptionScalingResolver.dialKey(dial)   return "dial_" .. dial end
 function OptionScalingResolver.switchKey(dial) return "switch_" .. dial end
@@ -177,7 +199,10 @@ function OptionScalingResolver.resolve(decl, profile)
     if type(intensity) ~= "number" then intensity = OptionScalingResolver.INTENSITY_NEUTRAL end
 
     local base   = decl.base or 1.0
-    local factor = OptionScalingResolver.curveEval(decl.curve, intensity)
+    -- A declaration may supply its own curve; otherwise the dial's canonical
+    -- ratio-pass curve applies, so consumers scale a dial consistently.
+    local curve  = decl.curve or OptionScalingResolver.DIAL_CURVES[decl.dial]
+    local factor = OptionScalingResolver.curveEval(curve, intensity)
     local eff    = base * factor
     return clampNumber(eff, decl.clampMin, decl.clampMax)
 end
