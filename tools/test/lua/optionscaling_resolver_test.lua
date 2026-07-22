@@ -91,7 +91,8 @@ end
 T.eq("gate nil profile -> allowed",   R.isToolAllowed(nil), true)
 T.eq("gate relaxed -> allowed",       R.isToolAllowed(profile({}, {}, "relaxed")), true)
 T.eq("gate standard -> blocked",      R.isToolAllowed(profile({}, {}, "standard")), false)
-T.eq("gate hard -> blocked",          R.isToolAllowed(profile({}, {}, "hard")), false)
+T.eq("gate realistic -> blocked",     R.isToolAllowed(profile({}, {}, "realistic")), false)
+T.eq("gate punishing -> blocked",     R.isToolAllowed(profile({}, {}, "punishing")), false)
 T.eq("gate custom -> blocked",        R.isToolAllowed(profile({}, {}, "custom")), false)
 
 -- ── transitive cascade: a chain of readers all neutralize together ──
@@ -137,3 +138,65 @@ T.near("community canonical at Punishing = 130", R.resolve(comm, profile({ commu
 -- A decl with its OWN curve overrides the canonical one.
 local ownCurve = { id = "o", dial = "economy", base = 100.0, curve = { at0 = 1.0, at1 = 1.0, at2 = 1.0 } }
 T.near("declared curve overrides canonical", R.resolve(ownCurve, profile({ economy = 2.0 }, { economy = true })), 100.0, 1e-6)
+
+-- ── ratio pass BACKLOG-20: authoritative preset set + per-dial numbers ──
+-- Locks the authoritative values from ecosystem-dev-tracking/systems/
+-- ratio-pass-BACKLOG-20/README.md, so a drift from the blessed set fails a line.
+
+-- The four named presets map to their canonical intensities on the 0..2 axis.
+T.near("preset relaxed -> intensity 0",     R.intensityForPreset("relaxed"),   0.0, 1e-9)
+T.near("preset standard -> intensity 1.0",  R.intensityForPreset("standard"),  1.0, 1e-9)
+T.near("preset realistic -> intensity 1.5", R.intensityForPreset("realistic"), 1.5, 1e-9)
+T.near("preset punishing -> intensity 2.0", R.intensityForPreset("punishing"), 2.0, 1e-9)
+T.eq("preset custom has no single intensity", R.intensityForPreset("custom"), nil)
+T.eq("preset unknown -> nil", R.intensityForPreset("nope"), nil)
+
+-- The enum carries exactly the five authoritative values, in bite order + custom.
+do
+  local want = { "relaxed", "standard", "realistic", "punishing", "custom" }
+  local ok = #R.PRESETS == #want
+  for i = 1, #want do if R.PRESETS[i] ~= want[i] then ok = false end end
+  T.ok("PRESETS is the authoritative five in order", ok)
+end
+
+-- Per-dial authoritative endpoints (multiplier at intensity 0 / 1.0 / 2.0),
+-- resolved through each dial's canonical curve (base 1.0, no decl curve).
+local function endp(dial, intensity)
+    return R.resolve({ id = dial, dial = dial, base = 1.0 },
+                     profile({ [dial] = intensity }, { [dial] = true }))
+end
+local ANCHORS = {
+    economy     = { 0.4, 1.8 },
+    labor       = { 0.6, 1.5 },
+    agronomy    = { 0.7, 1.4 },
+    biological  = { 0.5, 1.6 },
+    livestock   = { 0.5, 1.6 },
+    worldEvents = { 0.4, 1.7 },
+    community   = { 0.8, 1.3 },
+}
+for _, dial in ipairs(R.DIALS) do
+    local a = ANCHORS[dial]
+    T.near(dial .. " at0 (Relaxed, intensity 0)",   endp(dial, 0.0), a[1], 1e-6)
+    T.near(dial .. " identity (Standard, 1.0)",     endp(dial, 1.0), 1.0,  1e-6)
+    T.near(dial .. " at2 (Punishing, intensity 2)", endp(dial, 2.0), a[2], 1e-6)
+end
+
+-- Realistic = intensity 1.5 interpolates three-quarters from Standard to
+-- Punishing on every dial: multiplier = 1.0 + (at2 - 1.0) * 0.5.
+for _, dial in ipairs(R.DIALS) do
+    local want = 1.0 + (ANCHORS[dial][2] - 1.0) * 0.5
+    T.near(dial .. " at Realistic (1.5)", endp(dial, 1.5), want, 1e-6)
+end
+
+-- The Economy C5 escape-hatch second curve (0.2 / 1.0 / 2.75), read off the SAME
+-- economy intensity via a per-declaration curve override.
+local hatch = { id = "hatch", dial = "economy", base = 1.0, curve = R.ECONOMY_HATCH_CURVE }
+T.near("C5 hatch at Relaxed (intensity 0)",   R.resolve(hatch, profile({ economy = 0.0 }, { economy = true })), 0.2,  1e-6)
+T.near("C5 hatch at Standard (intensity 1)",  R.resolve(hatch, profile({ economy = 1.0 }, { economy = true })), 1.0,  1e-6)
+T.near("C5 hatch at Punishing (intensity 2)", R.resolve(hatch, profile({ economy = 2.0 }, { economy = true })), 2.75, 1e-6)
+-- Off ONE economy intensity, the hatch stings more than everyday economy at
+-- Punishing (2.75x vs 1.8x) and is never free even on Relaxed.
+T.ok("C5 hatch stings more than everyday economy at Punishing",
+     R.resolve(hatch, profile({ economy = 2.0 }, { economy = true })) > endp("economy", 2.0))
+T.ok("C5 hatch not free on Relaxed",
+     R.resolve(hatch, profile({ economy = 0.0 }, { economy = true })) > 0)

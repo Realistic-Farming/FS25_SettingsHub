@@ -71,6 +71,15 @@ OptionScalingResolver.DIAL_CURVES = {
     community   = { at0 = 0.8, at1 = 1.0, at2 = 1.3 },
 }
 
+-- The Economy dial carries a SECOND curve, C5 escape-hatch pricing (ratio pass
+-- BACKLOG-20): the recovery hatches (disease flush, emergency loan, feed flush)
+-- read the SAME economy intensity through a steeper curve, so a hatch always
+-- stings more than an everyday cost. A hatch pricer declares its value on the
+-- economy dial with curve = ECONOMY_HATCH_CURVE; resolve() honours a per
+-- declaration curve. On Punishing everyday economy runs 1.8x while a hatch runs
+-- 2.75x off the one Economy intensity; even on Relaxed a hatch is 0.2x, not free.
+OptionScalingResolver.ECONOMY_HATCH_CURVE = { at0 = 0.2, at1 = 1.0, at2 = 2.75 }
+
 -- The canonical curve for a dial, or nil for an unknown dial.
 function OptionScalingResolver.dialCurve(dial)
     return OptionScalingResolver.DIAL_CURVES[dial]
@@ -82,20 +91,39 @@ function OptionScalingResolver.switchKey(dial) return "switch_" .. dial end
 OptionScalingResolver.PRESET_KEY = "preset"
 
 -- Preset enum values + a coarse difficulty rank for the tuning-tool gate. The
--- NAMES and RANKS here are provisional structure; the authoritative preset set
--- and the per-preset dial configurations are Arissani's call + the ratio pass.
--- "custom" ranks at Standard so a hand-tuned world does not silently unlock the
--- tuning tools.
-OptionScalingResolver.PRESETS = { "relaxed", "standard", "hard", "custom" }
+-- authoritative preset set (ratio pass BACKLOG-20, Arissani + ClaudeA 2026-07-22):
+-- four named presets ordered by bite (Relaxed, Standard, Realistic, Punishing)
+-- plus Custom. Standard sits second of four, the 1.0 identity, with two harder
+-- presets above it; the ordering delivers Arissani's "Standard sits lower-middle"
+-- intent without moving the neutral point. "custom" ranks at Standard so a hand
+-- tuned world does not silently unlock the tuning tools.
+OptionScalingResolver.PRESETS = { "relaxed", "standard", "realistic", "punishing", "custom" }
 OptionScalingResolver.PRESET_RANK = {
-    relaxed = 0, standard = 1, hard = 2, custom = 1,
+    relaxed = 0, standard = 1, realistic = 2, punishing = 3, custom = 1,
 }
 OptionScalingResolver.DEFAULT_PRESET = "standard"
 
--- The default tuning-tool gate threshold: tools are available BELOW this rank
--- and blocked at it and above (so blocked at Standard+). Arissani owns the final
--- threshold; this is the brief's stated default.
-OptionScalingResolver.TOOL_GATE_THRESHOLD = 1  -- PRESET_RANK.standard
+-- Each named preset maps to ONE intensity on the 0..2 dial axis (ratio pass
+-- BACKLOG-20). Applying a preset sets every dial to this intensity, and each
+-- dial's own curve then yields its multiplier, so one slider position means the
+-- right thing suite-wide. Standard is the 1.0 identity; Realistic sits three
+-- quarters of the way from Standard to Punishing. Custom is absent here: the
+-- player sets each dial by hand.
+OptionScalingResolver.PRESET_INTENSITY = {
+    relaxed = 0.0, standard = 1.0, realistic = 1.5, punishing = 2.0,
+}
+
+-- The intensity a named preset sets on every dial, or nil for Custom / unknown.
+function OptionScalingResolver.intensityForPreset(preset)
+    return OptionScalingResolver.PRESET_INTENSITY[preset]
+end
+
+-- The tuning-tool gate threshold (ratio pass BACKLOG-20): tools are available
+-- BELOW this rank and blocked at it and above. Threshold 1 with the ranks above
+-- means available on Relaxed only (rank 0), blocked at Standard and up, the
+-- authoritative gate: a difficulty-bypass tool belongs only to the deliberate
+-- easy setting, never the engaged-player default.
+OptionScalingResolver.TOOL_GATE_THRESHOLD = 1  -- available on Relaxed only
 
 -- =========================================================
 -- Pure math

@@ -16,7 +16,7 @@
 -- The profile it registers:
 --   * seven dial FLOATS  (intensity 0..2, neutral 1.0), one per dial
 --   * seven switch BOOLS (default on), one per dial
---   * one preset ENUM    (relaxed / standard / hard / custom)
+--   * one preset ENUM    (relaxed / standard / realistic / punishing / custom)
 -- All adminOnly, so only the server (via an admin) can move them and every client
 -- derives identical effective values from the one synced profile.
 --
@@ -110,8 +110,10 @@ function OptionScalingSpine:_registerProfileModule()
         onChange = function(key, value, _playerId)
             -- Resolvers read the profile live per resolve point, so there is
             -- nothing to recompute here; note the change for diagnostics. The
-            -- preset-applies-dials convenience is deferred to the ratio pass,
-            -- which owns the per-preset dial configurations.
+            -- ratio pass delivered the per-preset intensities
+            -- (OptionScalingResolver.PRESET_INTENSITY); wiring the writer to push
+            -- a chosen preset onto the seven dials belongs to a later follow-up,
+            -- kept out of this numbers fold.
             SHLogger.debug("spine: %s -> %s", tostring(key), tostring(value))
         end,
         selfPersisted = false,   -- SettingsHub owns persistence + MP sync
