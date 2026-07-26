@@ -43,6 +43,9 @@ function SettingsHub.new()
     self.localLoaded   = false
     self.bedrockBound  = false
 
+    -- Admin Control Registry (API-8) rides inside the hub as an extension.
+    self.registry = AdminControlRegistry.new(self)
+
     return self
 end
 
@@ -57,12 +60,14 @@ function SettingsHub:_validate(def, value)
         return value
     elseif t == "int" then
         if type(value) ~= "number" then return nil end
+        if value ~= value or value == math.huge or value == -math.huge then return nil end
         value = math.floor(value)
         if def.min ~= nil and value < def.min then value = def.min end
         if def.max ~= nil and value > def.max then value = def.max end
         return value
     elseif t == "float" then
         if type(value) ~= "number" then return nil end
+        if value ~= value or value == math.huge or value == -math.huge then return nil end
         if def.min ~= nil and value < def.min then value = def.min end
         if def.max ~= nil and value > def.max then value = def.max end
         return value
@@ -88,7 +93,14 @@ function SettingsHub:registerModule(modId, spec)
         SHLogger.warning("registerModule('%s'): needs { adminSettings = {..}, onChange = fn }", modId); return false
     end
 
-    local mod = { order = {}, defs = {}, values = {}, onChange = spec.onChange }
+    -- selfPersisted: the companion owns its own save file and loads its own values
+    -- before it registers. For such a module the hub must NOT restore its own stale
+    -- stored copy over the freshly-registered value, nor replay it back through onChange
+    -- on load - doing so clobbered the companion's real setting every load (the
+    -- SoilFertilizer master `enabled` reset-to-false bug). The hub then acts as a
+    -- display mirror + live-edit forwarder only; the companion remains source of truth.
+    local mod = { order = {}, defs = {}, values = {}, onChange = spec.onChange,
+                  selfPersisted = spec.selfPersisted == true }
     for _, def in ipairs(spec.adminSettings) do
         if type(def) == "table" and type(def.id) == "string" then
             def.adminOnly = def.adminOnly == true
@@ -103,20 +115,37 @@ function SettingsHub:registerModule(modId, spec)
     if self.modules[modId] == nil then table.insert(self.registerOrder, modId) end
     self.modules[modId] = mod
 
+    -- Admin Control Registry (API-8): capture any declared administrative controls.
+    -- Additive and backward compatible - existing callers pass no adminControls and
+    -- are unaffected. The ack is the affirmative acknowledgement an adopter must hold
+    -- before it retires its own local rendering (brief section 7).
+    if type(spec.adminControls) == "table" and self.registry ~= nil then
+        mod.controlAck = self.registry:register(modId, spec.adminControls)
+    end
+
     -- Apply any values restored before this module registered (load is
     -- order-independent: StateLedger / the local file may arrive first).
     local restoredAdmin = self.savedAdmin[modId]
     local restoredLocal = self.savedLocal[modId]
     for _, id in ipairs(mod.order) do
         local def = mod.defs[id]
-        local restored = def.adminOnly and (restoredAdmin and restoredAdmin[id])
-                      or (not def.adminOnly and (restoredLocal and restoredLocal[id]))
-        if restored ~= nil then
-            local v = self:_validate(def, restored)
-            if v ~= nil then mod.values[id] = v end
+        -- Self-persisted companions keep the value they just registered (their own load
+        -- already ran); skip the hub restore + apply-on-load replay entirely so a stale
+        -- hub copy can never overwrite the companion's real setting.
+        if not mod.selfPersisted then
+            local restored
+            if def.adminOnly then
+                restored = restoredAdmin and restoredAdmin[id]
+            else
+                restored = restoredLocal and restoredLocal[id]
+            end
+            if restored ~= nil then
+                local v = self:_validate(def, restored)
+                if v ~= nil then mod.values[id] = v end
+            end
+            -- apply-on-load: queue the current value so the companion applies it
+            self:_queue(modId, id, mod.values[id], nil)
         end
-        -- apply-on-load: queue the current value so the companion applies it
-        self:_queue(modId, id, mod.values[id], nil)
     end
 
     self:_bindBedrock()
@@ -413,11 +442,57 @@ end
 -- Lifecycle
 -- =========================================================
 
+-- After loadLocalFile populates savedLocal, apply saved values to
+-- already-registered modules (registerModule runs before mission load).
+function SettingsHub:_applySavedLocal()
+    for _, modId in ipairs(self.registerOrder) do
+        local mod = self.modules[modId]
+        local restoredLocal = self.savedLocal[modId]
+        if not mod.selfPersisted and restoredLocal ~= nil then
+            for _, id in ipairs(mod.order) do
+                local def = mod.defs[id]
+                if not def.adminOnly then
+                    local restored = restoredLocal[id]
+                    if restored ~= nil then
+                        local v = self:_validate(def, restored)
+                        if v ~= nil and mod.values[id] ~= v then
+                            mod.values[id] = v
+                            self:_queue(modId, id, v, nil)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 function SettingsHub:onMissionLoaded()
     if not self.localLoaded then
         self:loadLocalFile()
     end
+    self:_applySavedLocal()
     self:_bindBedrock()
+    if self.registry ~= nil then
+        self.registry:onMissionLoaded()   -- register the creative flag + bind the invoke action
+    end
+end
+
+-- =========================================================
+-- Admin Control Registry (API-8) accessors for adopters
+-- =========================================================
+
+-- The single registry instance. Adopters check
+-- reg.CAPABILITY_VERSION before relying on it (a capability handle).
+function SettingsHub:getRegistry()
+    return self.registry
+end
+
+-- The affirmative registration acknowledgement for a module's declared controls,
+-- or nil if the module declared none. An adopter must not retire its own local
+-- rendering until this returns an ack with ok == true.
+function SettingsHub:getControlAck(modId)
+    local mod = self.modules[modId]
+    return mod ~= nil and mod.controlAck or nil
 end
 
 function SettingsHub:consoleCommandStatus()
