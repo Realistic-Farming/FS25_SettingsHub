@@ -60,12 +60,14 @@ function SettingsHub:_validate(def, value)
         return value
     elseif t == "int" then
         if type(value) ~= "number" then return nil end
+        if value ~= value or value == math.huge or value == -math.huge then return nil end
         value = math.floor(value)
         if def.min ~= nil and value < def.min then value = def.min end
         if def.max ~= nil and value > def.max then value = def.max end
         return value
     elseif t == "float" then
         if type(value) ~= "number" then return nil end
+        if value ~= value or value == math.huge or value == -math.huge then return nil end
         if def.min ~= nil and value < def.min then value = def.min end
         if def.max ~= nil and value > def.max then value = def.max end
         return value
@@ -131,8 +133,12 @@ function SettingsHub:registerModule(modId, spec)
         -- already ran); skip the hub restore + apply-on-load replay entirely so a stale
         -- hub copy can never overwrite the companion's real setting.
         if not mod.selfPersisted then
-            local restored = def.adminOnly and (restoredAdmin and restoredAdmin[id])
-                          or (not def.adminOnly and (restoredLocal and restoredLocal[id]))
+            local restored
+            if def.adminOnly then
+                restored = restoredAdmin and restoredAdmin[id]
+            else
+                restored = restoredLocal and restoredLocal[id]
+            end
             if restored ~= nil then
                 local v = self:_validate(def, restored)
                 if v ~= nil then mod.values[id] = v end
@@ -436,10 +442,35 @@ end
 -- Lifecycle
 -- =========================================================
 
+-- After loadLocalFile populates savedLocal, apply saved values to
+-- already-registered modules (registerModule runs before mission load).
+function SettingsHub:_applySavedLocal()
+    for _, modId in ipairs(self.registerOrder) do
+        local mod = self.modules[modId]
+        local restoredLocal = self.savedLocal[modId]
+        if not mod.selfPersisted and restoredLocal ~= nil then
+            for _, id in ipairs(mod.order) do
+                local def = mod.defs[id]
+                if not def.adminOnly then
+                    local restored = restoredLocal[id]
+                    if restored ~= nil then
+                        local v = self:_validate(def, restored)
+                        if v ~= nil and mod.values[id] ~= v then
+                            mod.values[id] = v
+                            self:_queue(modId, id, v, nil)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 function SettingsHub:onMissionLoaded()
     if not self.localLoaded then
         self:loadLocalFile()
     end
+    self:_applySavedLocal()
     self:_bindBedrock()
     if self.registry ~= nil then
         self.registry:onMissionLoaded()   -- register the creative flag + bind the invoke action
