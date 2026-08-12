@@ -24,9 +24,13 @@ source(modDirectory .. "src/AdminControlRegistry.lua")
 source(modDirectory .. "src/OptionScalingResolver.lua")
 source(modDirectory .. "src/OptionScalingSpine.lua")
 source(modDirectory .. "src/SettingsHub.lua")
+source(modDirectory .. "src/InGameMenuPageGuard.lua")
 
 local settingsHub = SettingsHub.new()
 getfenv(0)["g_settingsHub"] = settingsHub
+
+-- Suite ESC-menu stacking guard (idempotent; companions may also try).
+InGameMenuPageGuard.install()
 
 local function onMissionLoad(mission)
     if mission ~= nil then
@@ -37,10 +41,12 @@ end
 
 local function onMissionLoadedFinished()
     settingsHub:onMissionLoaded()
+    InGameMenuPageGuard.install()
 end
 
 local function onMissionUpdate(mission, dt)
     settingsHub:update(dt)
+    InGameMenuPageGuard.update(dt)
 end
 
 local function onMissionSave()
