@@ -61,6 +61,15 @@ local function onMissionDelete()
     end
 end
 
+-- GIANTS nil-check bug: DebugCameraClone:update calls getWorldTranslation on
+-- a nil camera or player graphicsRootNode after a disconnect, error-floods
+-- every frame and freezes the client. Nobody uses the debug camera clone on
+-- live servers, so neuter the update entirely: no raiseActive, no dirty
+-- flags, no per-frame network traffic for a dead debug feature.
+if DebugCameraClone ~= nil then
+    DebugCameraClone.update = function() end
+end
+
 Mission00.load = Utils.appendedFunction(Mission00.load, onMissionLoad)
 Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, onMissionLoadedFinished)
 FSBaseMission.update = Utils.appendedFunction(FSBaseMission.update, onMissionUpdate)
