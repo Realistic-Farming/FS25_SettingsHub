@@ -31,7 +31,7 @@
 -- client-side check is presentation only and is never trusted.
 -- =========================================================
 
-AdminControlRegistry = {}
+AdminControlRegistry = AdminControlRegistry or {}
 local AdminControlRegistry_mt = Class(AdminControlRegistry)
 
 -- Adopters check this handle before retiring their local rendering.

@@ -26,7 +26,7 @@
 -- as it does today until the ratio pass tunes it.
 -- =========================================================
 
-OptionScalingSpine = {}
+OptionScalingSpine = OptionScalingSpine or {}
 local OptionScalingSpine_mt = Class(OptionScalingSpine)
 
 OptionScalingSpine.MODULE = OptionScalingResolver.MODULE

@@ -16,7 +16,14 @@
 -- it can register during their own module load.
 -- =========================================================
 
-local modDirectory = g_currentModDirectory
+-- Hot-reload latch (FuelCosts reference): g_currentModDirectory and
+-- g_currentModName are nil on a live re-source, so they are latched into
+-- module globals on first load, with a g_modsDirectory loose-folder fallback.
+SettingsHubModDirectory = SettingsHubModDirectory
+    or g_currentModDirectory
+    or (g_modsDirectory ~= nil and (g_modsDirectory .. "FS25_SettingsHub/") or nil)
+SettingsHubModName = SettingsHubModName or g_currentModName or "FS25_SettingsHub"
+local modDirectory = SettingsHubModDirectory
 
 source(modDirectory .. "src/Logger.lua")
 source(modDirectory .. "src/SettingsHubAdminEvent.lua")
