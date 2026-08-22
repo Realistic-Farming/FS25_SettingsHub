@@ -25,7 +25,7 @@
 --                        stay local, which is SoilFertilizer Point 7.)
 -- =========================================================
 
-SettingsHub = {}
+SettingsHub = SettingsHub or {}
 local SettingsHub_mt = Class(SettingsHub)
 
 SettingsHub.MAX_PER_FRAME = 2

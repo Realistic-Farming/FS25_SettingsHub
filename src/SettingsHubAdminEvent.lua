@@ -10,7 +10,7 @@
 -- event: a client requests, the server is authoritative.
 -- =========================================================
 
-SettingsHubAdminEvent = {}
+SettingsHubAdminEvent = SettingsHubAdminEvent or {}
 local SettingsHubAdminEvent_mt = Class(SettingsHubAdminEvent, Event)
 InitEventClass(SettingsHubAdminEvent, "SettingsHubAdminEvent")
 

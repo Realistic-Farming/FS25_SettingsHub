@@ -6,7 +6,7 @@
 -- Mod-prefixed logging so lines are greppable by "[SettingsHub]".
 -- =========================================================
 
-SHLogger = {}
+SHLogger = SHLogger or {}
 SHLogger.PREFIX = "[SettingsHub] "
 SHLogger.debugEnabled = false
 
