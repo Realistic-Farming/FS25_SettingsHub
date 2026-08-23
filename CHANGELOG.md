@@ -16,6 +16,7 @@ the repo's git history and README.
 ### Added
 - Changelog file established (suite ruling 2026-08-22).
 - Control Center core: `RfActionRegistry`, `RfLiveBinding`, `RfInputContextGuard`, `RfControlCenterInput`, and the `RF_OPEN_CONTROL_CENTER` summon key (default: Right Shift + A). Publishes `g_currentMission.rfActionRegistry` for companion delegates.
+- Control Center dialog GUI (`RfKeybindActionDialog`): vanilla `fs25_dialog` chrome with live key chips and trigger buttons that run registered delegates.
 
 ## [1.0.1.0] - 2026-08-22
 
