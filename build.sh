@@ -32,7 +32,7 @@ py -c "
 import zipfile, os, sys
 
 zip_name = sys.argv[1]
-include = ['modDesc.xml', 'icon.dds', 'main.lua', 'src']
+include = ['modDesc.xml', 'icon.dds', 'main.lua', 'src', 'xml']
 
 with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zf:
     for entry in include:
