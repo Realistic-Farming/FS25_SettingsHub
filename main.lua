@@ -38,6 +38,7 @@ source(modDirectory .. "src/InGameMenuPageGuard.lua")
 source(modDirectory .. "src/rf/RfLiveBinding.lua")
 source(modDirectory .. "src/rf/RfActionRegistry.lua")
 source(modDirectory .. "src/rf/RfInputContextGuard.lua")
+source(modDirectory .. "src/gui/RfKeybindActionDialog.lua")
 source(modDirectory .. "src/rf/RfControlCenterInput.lua")
 
 local settingsHub = SettingsHub.new()
@@ -64,6 +65,7 @@ local function onMissionLoadedFinished()
     settingsHub:onMissionLoaded()
     InGameMenuPageGuard.install()
     RfActionRegistry.publish()
+    RfKeybindActionDialog.register()
 end
 
 local function onMissionUpdate(mission, dt)
