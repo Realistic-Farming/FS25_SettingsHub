@@ -12,7 +12,7 @@
 -- are missing — install once from SettingsHub.
 -- =========================================================
 
-InGameMenuPageGuard = {}
+InGameMenuPageGuard = InGameMenuPageGuard or {}
 
 local function enforceSingleVisibleMenuPage(menu)
     if menu == nil then return end

@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!--
+    RfKeybindActionDialog - FS25_SettingsHub
+    The Realistic Farming Control Center.
+
+    Pattern: emptyPanel row containers with fixed slots plus pagination, the
+    idiom proven by SoilReportDialog and DepotDialog. Text cells at an
+    intermediate X MUST sit inside a row container or they will not position.
+    Rows are a fixed pool filled from Lua, not created at runtime, so a session
+    with 3 mods and one with 20 use the same layout and only the page count
+    changes.
+
+    COLUMN GEOMETRY. The row container is 880px wide, half-width 440. Each
+    column is defined by an explicit LEFT EDGE and its centre is derived from
+    its own width. This matters: elements anchor at their centre, so a header
+    250px wide and a data cell 170px wide sharing one position start their
+    left-aligned text 40px apart, which is exactly how the headings drifted out
+    of line. Header and data profiles now share a width per column.
+
+      Column   Width   Left edge   Centre
+      Module   170px   -430px       -345px
+      Action   260px   -250px       -120px
+      Key      160px    +30px        110px
+      Trigger  120px   +250px        310px
+
+    Rightmost edge is +370px, inside the 440px half-width, so nothing overhangs.
+
+    Y LAYOUT. Elements anchor top-down and occupy their full height, so a
+    separator has to clear the BOTTOM of the element above it, not just its
+    position. The title sits at -18 and is 24px tall, so it occupies -18 to -42;
+    the first separator is at -50, clear of it. The old layout put that
+    separator at -34, inside the title box, which drew a line through the title,
+    and put another one inside the pagination row.
+
+      -18  : title           -50  : separator
+      -60  : header row      -84  : separator
+      -92  : rows 0..24 at 20px, last row ends -592
+      -600 : separator       -608 : pagination
+      -638 : separator       -646 : summon hint
+      -666 : status
+
+    Trigger buttons extend fs25_wideButton, NOT buttonActivate. buttonActivate
+    inherits inputAction MENU_ACTIVATE and therefore paints a SPACE key chip
+    that shoves its own label out of its box onto the neighbouring cell.
+    fs25_wideButton is buttonActivate's own base minus the inputAction: same
+    chrome, no chip, and mouse onClick is unaffected because it never used the
+    action. Proven live 2026-08-22.
+-->
+<GUI onOpen="onOpen" onClose="rfccOnClose" onCreate="onCreate">
+    <GuiElement profile="newLayer"/>
+    <Bitmap profile="dialogFullscreenBg" id="dialogBg"/>
+
+    <GuiElement profile="rfccDialogBg" id="dialogElement">
+        <ThreePartBitmap profile="fs25_dialogBgMiddle"/>
+        <ThreePartBitmap profile="fs25_dialogBgTop"/>
+        <ThreePartBitmap profile="fs25_dialogBgBottom"/>
+
+        <GuiElement profile="fs25_dialogContentContainer">
+
+            <!-- Title -->
+            <Text profile="rfccTitle" id="rfccTitleText" position="0px -18px" text="Realistic Farming Control Center"/>
+
+            <Bitmap profile="rfccDivider" position="0px -50px"/>
+
+            <!-- Column headers. One profile per column, width matched to the
+                 data cell below it so the two line up. -->
+            <GuiElement profile="rfccHeaderRow" position="0px -60px">
+                <Text profile="rfccHeadModule" id="colModuleHeader" position="-345px -5px" text="Module"/>
+                <Text profile="rfccHeadAction" id="colActionHeader" position="-120px -5px" text="Action"/>
+                <Text profile="rfccHeadKey"    id="colKeyHeader"    position="110px -5px" text="Assigned Key"/>
+                <Text profile="rfccHeadBtn"    id="colBtnHeader"    position="310px -5px" text="Trigger"/>
+            </GuiElement>
+
+            <Bitmap profile="rfccDivider" position="0px -84px"/>
+
+            <!-- Row 0 -->
+            <GuiElement profile="rfccRow" position="0px -92px">
+                <Text   profile="rfccCellModule" id="row0module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row0action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row0key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row0btn"    position="310px 0px" text="Run" onClick="onTrigger0"/>
+            </GuiElement>
+
+            <!-- Row 1 -->
+            <GuiElement profile="rfccRow" position="0px -112px">
+                <Text   profile="rfccCellModule" id="row1module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row1action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row1key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row1btn"    position="310px 0px" text="Run" onClick="onTrigger1"/>
+            </GuiElement>
+
+            <!-- Row 2 -->
+            <GuiElement profile="rfccRow" position="0px -132px">
+                <Text   profile="rfccCellModule" id="row2module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row2action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row2key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row2btn"    position="310px 0px" text="Run" onClick="onTrigger2"/>
+            </GuiElement>
+
+            <!-- Row 3 -->
+            <GuiElement profile="rfccRow" position="0px -152px">
+                <Text   profile="rfccCellModule" id="row3module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row3action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row3key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row3btn"    position="310px 0px" text="Run" onClick="onTrigger3"/>
+            </GuiElement>
+
+            <!-- Row 4 -->
+            <GuiElement profile="rfccRow" position="0px -172px">
+                <Text   profile="rfccCellModule" id="row4module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row4action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row4key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row4btn"    position="310px 0px" text="Run" onClick="onTrigger4"/>
+            </GuiElement>
+
+            <!-- Row 5 -->
+            <GuiElement profile="rfccRow" position="0px -192px">
+                <Text   profile="rfccCellModule" id="row5module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row5action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row5key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row5btn"    position="310px 0px" text="Run" onClick="onTrigger5"/>
+            </GuiElement>
+
+            <!-- Row 6 -->
+            <GuiElement profile="rfccRow" position="0px -212px">
+                <Text   profile="rfccCellModule" id="row6module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row6action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row6key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row6btn"    position="310px 0px" text="Run" onClick="onTrigger6"/>
+            </GuiElement>
+
+            <!-- Row 7 -->
+            <GuiElement profile="rfccRow" position="0px -232px">
+                <Text   profile="rfccCellModule" id="row7module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row7action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row7key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row7btn"    position="310px 0px" text="Run" onClick="onTrigger7"/>
+            </GuiElement>
+
+            <!-- Row 8 -->
+            <GuiElement profile="rfccRow" position="0px -252px">
+                <Text   profile="rfccCellModule" id="row8module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row8action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row8key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row8btn"    position="310px 0px" text="Run" onClick="onTrigger8"/>
+            </GuiElement>
+
+            <!-- Row 9 -->
+            <GuiElement profile="rfccRow" position="0px -272px">
+                <Text   profile="rfccCellModule" id="row9module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row9action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row9key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row9btn"    position="310px 0px" text="Run" onClick="onTrigger9"/>
+            </GuiElement>
+
+            <!-- Row 10 -->
+            <GuiElement profile="rfccRow" position="0px -292px">
+                <Text   profile="rfccCellModule" id="row10module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row10action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row10key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row10btn"    position="310px 0px" text="Run" onClick="onTrigger10"/>
+            </GuiElement>
+
+            <!-- Row 11 -->
+            <GuiElement profile="rfccRow" position="0px -312px">
+                <Text   profile="rfccCellModule" id="row11module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row11action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row11key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row11btn"    position="310px 0px" text="Run" onClick="onTrigger11"/>
+            </GuiElement>
+
+            <!-- Row 12 -->
+            <GuiElement profile="rfccRow" position="0px -332px">
+                <Text   profile="rfccCellModule" id="row12module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row12action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row12key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row12btn"    position="310px 0px" text="Run" onClick="onTrigger12"/>
+            </GuiElement>
+
+            <!-- Row 13 -->
+            <GuiElement profile="rfccRow" position="0px -352px">
+                <Text   profile="rfccCellModule" id="row13module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row13action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row13key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row13btn"    position="310px 0px" text="Run" onClick="onTrigger13"/>
+            </GuiElement>
+
+            <!-- Row 14 -->
+            <GuiElement profile="rfccRow" position="0px -372px">
+                <Text   profile="rfccCellModule" id="row14module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row14action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row14key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row14btn"    position="310px 0px" text="Run" onClick="onTrigger14"/>
+            </GuiElement>
+
+            <!-- Row 15 -->
+            <GuiElement profile="rfccRow" position="0px -392px">
+                <Text   profile="rfccCellModule" id="row15module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row15action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row15key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row15btn"    position="310px 0px" text="Run" onClick="onTrigger15"/>
+            </GuiElement>
+
+            <!-- Row 16 -->
+            <GuiElement profile="rfccRow" position="0px -412px">
+                <Text   profile="rfccCellModule" id="row16module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row16action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row16key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row16btn"    position="310px 0px" text="Run" onClick="onTrigger16"/>
+            </GuiElement>
+
+            <!-- Row 17 -->
+            <GuiElement profile="rfccRow" position="0px -432px">
+                <Text   profile="rfccCellModule" id="row17module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row17action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row17key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row17btn"    position="310px 0px" text="Run" onClick="onTrigger17"/>
+            </GuiElement>
+
+            <!-- Row 18 -->
+            <GuiElement profile="rfccRow" position="0px -452px">
+                <Text   profile="rfccCellModule" id="row18module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row18action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row18key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row18btn"    position="310px 0px" text="Run" onClick="onTrigger18"/>
+            </GuiElement>
+
+            <!-- Row 19 -->
+            <GuiElement profile="rfccRow" position="0px -472px">
+                <Text   profile="rfccCellModule" id="row19module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row19action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row19key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row19btn"    position="310px 0px" text="Run" onClick="onTrigger19"/>
+            </GuiElement>
+
+            <!-- Row 20 -->
+            <GuiElement profile="rfccRow" position="0px -492px">
+                <Text   profile="rfccCellModule" id="row20module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row20action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row20key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row20btn"    position="310px 0px" text="Run" onClick="onTrigger20"/>
+            </GuiElement>
+
+            <!-- Row 21 -->
+            <GuiElement profile="rfccRow" position="0px -512px">
+                <Text   profile="rfccCellModule" id="row21module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row21action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row21key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row21btn"    position="310px 0px" text="Run" onClick="onTrigger21"/>
+            </GuiElement>
+
+            <!-- Row 22 -->
+            <GuiElement profile="rfccRow" position="0px -532px">
+                <Text   profile="rfccCellModule" id="row22module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row22action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row22key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row22btn"    position="310px 0px" text="Run" onClick="onTrigger22"/>
+            </GuiElement>
+
+            <!-- Row 23 -->
+            <GuiElement profile="rfccRow" position="0px -552px">
+                <Text   profile="rfccCellModule" id="row23module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row23action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row23key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row23btn"    position="310px 0px" text="Run" onClick="onTrigger23"/>
+            </GuiElement>
+
+            <!-- Row 24 -->
+            <GuiElement profile="rfccRow" position="0px -572px">
+                <Text   profile="rfccCellModule" id="row24module" position="-345px -4px" text=""/>
+                <Text   profile="rfccCellAction" id="row24action" position="-120px -4px" text=""/>
+                <Text   profile="rfccCellKey"    id="row24key"    position="110px -4px" text=""/>
+                <Button profile="rfccTriggerBtn" id="row24btn"    position="310px 0px" text="Run" onClick="onTrigger24"/>
+            </GuiElement>
+
+            <Bitmap profile="rfccDivider" position="0px -600px"/>
+
+            <!-- Pagination -->
+            <GuiElement profile="rfccRow" position="0px -608px">
+                <Button profile="rfccPageBtn" id="prevPageBtn" position="-120px 0px" text="&lt;" onClick="onPrevPage"/>
+                <Text   profile="rfccPageLabel" id="pageLabel"  position="0px -4px" text=""/>
+                <Button profile="rfccPageBtn" id="nextPageBtn" position="120px 0px" text="&gt;" onClick="onNextPage"/>
+            </GuiElement>
+
+            <Bitmap profile="rfccDivider" position="0px -638px"/>
+
+            <Text profile="rfccHint"   id="summonHint" position="0px -646px" text=""/>
+            <Text profile="rfccStatus" id="statusText" position="0px -666px" text=""/>
+
+        </GuiElement>
+
+        <BoxLayout profile="fs25_dialogButtonBox">
+            <Button profile="buttonBack" id="closeButton" text="Back" onClick="onClickBack"/>
+            <Button profile="buttonActivate" id="rebindButton" text="Change Keys" onClick="onClickRebind"/>
+        </BoxLayout>
+
+    </GuiElement>
+
+    <GUIProfiles>
+
+        <Profile name="rfccDialogBg" extends="fs25_dialogBg">
+            <size value="1000px 880px"/>
+        </Profile>
+
+        <Profile name="rfccTitle" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="880px 24px"/>
+            <textSize value="20px"/>
+            <textBold value="true"/>
+            <textColor value="1 1 1 1"/>
+            <textAlignment value="center"/>
+        </Profile>
+
+        <!-- Separator, matched to the 880px row width so it frames the table
+             instead of overhanging it. -->
+        <Profile name="rfccDivider" extends="baseReference" with="anchorTopCenter">
+            <size value="880px 1px"/>
+            <imageColor value="0.3 0.35 0.45 0.8"/>
+        </Profile>
+
+        <!-- Row containers -->
+        <Profile name="rfccHeaderRow" extends="emptyPanel" with="anchorTopCenter">
+            <size value="880px 20px"/>
+        </Profile>
+        <Profile name="rfccRow" extends="emptyPanel" with="anchorTopCenter">
+            <size value="880px 20px"/>
+        </Profile>
+
+        <!-- Column headers: width matched per column to the data cell below. -->
+        <Profile name="rfccHeadModule" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="170px 14px"/>
+            <textSize value="11px"/>
+            <textBold value="true"/>
+            <textUpperCase value="true"/>
+            <textColor value="0.55 0.7 0.9 1"/>
+            <textAlignment value="left"/>
+        </Profile>
+        <Profile name="rfccHeadAction" extends="rfccHeadModule">
+            <size value="260px 14px"/>
+        </Profile>
+        <Profile name="rfccHeadKey" extends="rfccHeadModule">
+            <size value="160px 14px"/>
+        </Profile>
+        <Profile name="rfccHeadBtn" extends="rfccHeadModule">
+            <size value="120px 14px"/>
+            <textAlignment value="center"/>
+        </Profile>
+
+        <!-- Cell text -->
+        <Profile name="rfccCellModule" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="170px 16px"/>
+            <textSize value="13px"/>
+            <textAlignment value="left"/>
+            <textColor value="0.82 0.82 0.82 1"/>
+        </Profile>
+        <Profile name="rfccCellAction" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="260px 16px"/>
+            <textSize value="13px"/>
+            <textAlignment value="left"/>
+            <textColor value="1 1 1 1"/>
+        </Profile>
+        <Profile name="rfccCellKey" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="160px 16px"/>
+            <textSize value="13px"/>
+            <textAlignment value="left"/>
+            <textColor value="0.9 0.75 0.2 1"/>
+        </Profile>
+
+        <!-- Trigger button: fs25_wideButton, deliberately not buttonActivate -->
+        <Profile name="rfccTriggerBtn" extends="fs25_wideButton" with="anchorTopCenter">
+            <size value="120px 20px"/>
+            <textSize value="12px"/>
+        </Profile>
+
+        <!-- Pagination -->
+        <Profile name="rfccPageBtn" extends="fs25_wideButton" with="anchorTopCenter">
+            <size value="48px 22px"/>
+            <textSize value="12px"/>
+        </Profile>
+        <Profile name="rfccPageLabel" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="240px 16px"/>
+            <textSize value="12px"/>
+            <textAlignment value="center"/>
+            <textColor value="0.82 0.82 0.82 1"/>
+        </Profile>
+
+        <!-- Footer -->
+        <Profile name="rfccHint" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="880px 16px"/>
+            <textSize value="12px"/>
+            <textAlignment value="center"/>
+            <textColor value="1 1 1 0.7"/>
+        </Profile>
+        <Profile name="rfccStatus" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="880px 16px"/>
+            <textSize value="12px"/>
+            <textAlignment value="center"/>
+            <textColor value="0.35 0.88 0.42 1"/>
+        </Profile>
+
+    </GUIProfiles>
+</GUI>

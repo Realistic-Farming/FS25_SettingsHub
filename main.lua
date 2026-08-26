@@ -16,7 +16,14 @@
 -- it can register during their own module load.
 -- =========================================================
 
-local modDirectory = g_currentModDirectory
+-- Hot-reload latch (FuelCosts reference): g_currentModDirectory and
+-- g_currentModName are nil on a live re-source, so they are latched into
+-- module globals on first load, with a g_modsDirectory loose-folder fallback.
+SettingsHubModDirectory = SettingsHubModDirectory
+    or g_currentModDirectory
+    or (g_modsDirectory ~= nil and (g_modsDirectory .. "FS25_SettingsHub/") or nil)
+SettingsHubModName = SettingsHubModName or g_currentModName or "FS25_SettingsHub"
+local modDirectory = SettingsHubModDirectory
 
 source(modDirectory .. "src/Logger.lua")
 source(modDirectory .. "src/SettingsHubAdminEvent.lua")
@@ -26,22 +33,39 @@ source(modDirectory .. "src/OptionScalingSpine.lua")
 source(modDirectory .. "src/SettingsHub.lua")
 source(modDirectory .. "src/InGameMenuPageGuard.lua")
 
+-- Control Center (RfKeybindActionDialog): action registry, live key readout,
+-- context guard, master summon binding and the dialog itself.
+source(modDirectory .. "src/rf/RfLiveBinding.lua")
+source(modDirectory .. "src/rf/RfActionRegistry.lua")
+source(modDirectory .. "src/rf/RfInputContextGuard.lua")
+source(modDirectory .. "src/gui/RfKeybindActionDialog.lua")
+source(modDirectory .. "src/rf/RfControlCenterInput.lua")
+
 local settingsHub = SettingsHub.new()
 getfenv(0)["g_settingsHub"] = settingsHub
 
 -- Suite ESC-menu stacking guard (idempotent; companions may also try).
 InGameMenuPageGuard.install()
 
+-- Control Center summon key. Installed at module load because the on-foot half
+-- must wrap PlayerInputComponent.registerActionEvents before the first one fires.
+RfControlCenterInput.install()
+
 local function onMissionLoad(mission)
     if mission ~= nil then
         mission.settingsHub = settingsHub
     end
+    -- Only the g_currentMission handle carries live between mod environments,
+    -- so companions reach the action registry through it.
+    RfActionRegistry.publish()
     SHLogger.info("SettingsHub active (mod 4, settings)")
 end
 
 local function onMissionLoadedFinished()
     settingsHub:onMissionLoaded()
     InGameMenuPageGuard.install()
+    RfActionRegistry.publish()
+    RfKeybindActionDialog.register()
 end
 
 local function onMissionUpdate(mission, dt)
@@ -58,7 +82,17 @@ local function onMissionDelete()
     getfenv(0)["g_settingsHub"] = nil
     if g_currentMission ~= nil then
         g_currentMission.settingsHub = nil
+        g_currentMission.rfActionRegistry = nil
     end
+end
+
+-- GIANTS nil-check bug: DebugCameraClone:update calls getWorldTranslation on
+-- a nil camera or player graphicsRootNode after a disconnect, error-floods
+-- every frame and freezes the client. Nobody uses the debug camera clone on
+-- live servers, so neuter the update entirely: no raiseActive, no dirty
+-- flags, no per-frame network traffic for a dead debug feature.
+if DebugCameraClone ~= nil then
+    DebugCameraClone.update = function() end
 end
 
 Mission00.load = Utils.appendedFunction(Mission00.load, onMissionLoad)

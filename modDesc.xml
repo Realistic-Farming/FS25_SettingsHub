@@ -66,6 +66,37 @@
 
     <multiplayer supported="true"/>
 
+    <l10n>
+        <text name="input_RF_OPEN_CONTROL_CENTER">
+            <en><![CDATA[Open Realistic Farming Control Center]]></en>
+            <de><![CDATA[Realistic Farming Kontrollzentrum offnen]]></de>
+            <fr><![CDATA[Ouvrir le centre de controle Realistic Farming]]></fr>
+            <nl><![CDATA[Realistic Farming Controlecentrum openen]]></nl>
+            <it><![CDATA[Apri il centro di controllo Realistic Farming]]></it>
+            <pl><![CDATA[Otworz centrum sterowania Realistic Farming]]></pl>
+            <es><![CDATA[Abrir el centro de control de Realistic Farming]]></es>
+            <ea><![CDATA[Abrir el centro de control de Realistic Farming]]></ea>
+            <pt><![CDATA[Abrir o centro de controlo Realistic Farming]]></pt>
+            <br><![CDATA[Abrir a central de controle Realistic Farming]]></br>
+        </text>
+    </l10n>
+
+    <actions>
+        <action name="RF_OPEN_CONTROL_CENTER" category="ONFOOT VEHICLE" />
+    </actions>
+
+    <inputBinding>
+        <!-- Right Shift + A: checked free against every default binding in the
+             suite (rshift + b/c/e/g/i/j/k/m/n/o/p/q/r/t/u/v/z and rshift+1 are
+             taken, rctrl+t is FarmTablet). Function keys are banned by standing
+             rule, so none is offered. A chord collision makes registerActionEvent
+             fail silently by design; the cure is a rebind in Controls, and the
+             Control Center row will show whatever the player actually has. -->
+        <actionBinding action="RF_OPEN_CONTROL_CENTER">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_rshift KEY_a" />
+        </actionBinding>
+    </inputBinding>
+
     <dependencies>
         <dependency>FS25_StateLedger</dependency>
         <dependency>FS25_NetworkSync</dependency>
