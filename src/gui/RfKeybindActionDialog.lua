@@ -250,7 +250,15 @@ function RfKeybindActionDialog:paintSlot(slot, row)
     if cells.button ~= nil then
         cells.button:setVisible(runnable)
         if runnable then
-            cells.button:setText(row.delegate.button or "Run")
+            -- button may be a plain string or a function evaluated each paint, so
+            -- a stateful delegate (e.g. a HUD hide/show) can show "Hide" or "Show"
+            -- for its current state. A throwing or non-string function falls back.
+            local caption = row.delegate.button
+            if type(caption) == "function" then
+                local okCap, txt = pcall(caption)
+                caption = (okCap and type(txt) == "string" and txt) or "Run"
+            end
+            cells.button:setText(caption or "Run")
         end
     end
 end
@@ -332,10 +340,10 @@ function RfKeybindActionDialog:triggerSlot(slot)
         g_gui:closeDialogByName(RfKeybindActionDialog.CLASS_NAME)
     end
 
-    local ok, err = pcall(delegate.run)
+    local ok, result = pcall(delegate.run)
     if not ok then
         SHLogger.error("Control Center: action %s failed: %s",
-            tostring(row.action), tostring(err))
+            tostring(row.action), tostring(result))
         if not delegate.closeFirst then
             self:showStatus("That action reported an error. See log.txt.")
         end
@@ -343,7 +351,14 @@ function RfKeybindActionDialog:triggerSlot(slot)
     end
 
     if not delegate.closeFirst then
-        self:showStatus(row.label .. " triggered.")
+        -- A delegate may return a status string describing the new state (e.g.
+        -- "Income HUD hidden"). Repaint first so a function-valued button caption
+        -- flips in place (Hide <-> Show) without the player leaving the dialog.
+        -- Both are opt in: a delegate returning nothing with a plain-string
+        -- caption behaves exactly as before.
+        self:paintPage()
+        self:paintFooter()
+        self:showStatus(type(result) == "string" and result or (row.label .. " triggered."))
     end
 end
 
