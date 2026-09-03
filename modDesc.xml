@@ -86,12 +86,9 @@
     </actions>
 
     <inputBinding>
-        <!-- Right Shift + A: checked free against every default binding in the
-             suite (rshift + b/c/e/g/i/j/k/m/n/o/p/q/r/t/u/v/z and rshift+1 are
-             taken, rctrl+t is FarmTablet). Function keys are banned by standing
-             rule, so none is offered. A chord collision makes registerActionEvent
-             fail silently by design; the cure is a rebind in Controls, and the
-             Control Center row will show whatever the player actually has. -->
+        <!-- Right Shift + A opens the RF Control Center. Suite defaults use Right
+             Shift + letter/number/punctuation; Farm Tablet uses Right Ctrl + T.
+             Control Center shows live chords from RfLiveBinding. -->
         <actionBinding action="RF_OPEN_CONTROL_CENTER">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_rshift KEY_a" />
         </actionBinding>
