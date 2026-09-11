@@ -69,6 +69,7 @@
                 <Text profile="rfccHeadAction" id="colActionHeader" position="-120px -5px" text="Action"/>
                 <Text profile="rfccHeadKey"    id="colKeyHeader"    position="110px -5px" text="Assigned Key"/>
                 <Text profile="rfccHeadBtn"    id="colBtnHeader"    position="310px -5px" text="Trigger"/>
+                <Text profile="rfccHeadRebind" id="colRebindHeader" position="400px -5px" text="Rebind"/>
             </GuiElement>
 
             <Bitmap profile="rfccDivider" position="0px -84px"/>
@@ -79,6 +80,7 @@
                 <Text   profile="rfccCellAction" id="row0action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row0key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row0btn"    position="310px 0px" text="Run" onClick="onTrigger0"/>
+                <Button profile="rfccRebindBtn" id="row0rebind" position="400px 0px" text="Rebind" onClick="onRebind0"/>
             </GuiElement>
 
             <!-- Row 1 -->
@@ -87,6 +89,7 @@
                 <Text   profile="rfccCellAction" id="row1action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row1key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row1btn"    position="310px 0px" text="Run" onClick="onTrigger1"/>
+                <Button profile="rfccRebindBtn" id="row1rebind" position="400px 0px" text="Rebind" onClick="onRebind1"/>
             </GuiElement>
 
             <!-- Row 2 -->
@@ -95,6 +98,7 @@
                 <Text   profile="rfccCellAction" id="row2action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row2key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row2btn"    position="310px 0px" text="Run" onClick="onTrigger2"/>
+                <Button profile="rfccRebindBtn" id="row2rebind" position="400px 0px" text="Rebind" onClick="onRebind2"/>
             </GuiElement>
 
             <!-- Row 3 -->
@@ -103,6 +107,7 @@
                 <Text   profile="rfccCellAction" id="row3action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row3key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row3btn"    position="310px 0px" text="Run" onClick="onTrigger3"/>
+                <Button profile="rfccRebindBtn" id="row3rebind" position="400px 0px" text="Rebind" onClick="onRebind3"/>
             </GuiElement>
 
             <!-- Row 4 -->
@@ -111,6 +116,7 @@
                 <Text   profile="rfccCellAction" id="row4action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row4key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row4btn"    position="310px 0px" text="Run" onClick="onTrigger4"/>
+                <Button profile="rfccRebindBtn" id="row4rebind" position="400px 0px" text="Rebind" onClick="onRebind4"/>
             </GuiElement>
 
             <!-- Row 5 -->
@@ -119,6 +125,7 @@
                 <Text   profile="rfccCellAction" id="row5action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row5key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row5btn"    position="310px 0px" text="Run" onClick="onTrigger5"/>
+                <Button profile="rfccRebindBtn" id="row5rebind" position="400px 0px" text="Rebind" onClick="onRebind5"/>
             </GuiElement>
 
             <!-- Row 6 -->
@@ -127,6 +134,7 @@
                 <Text   profile="rfccCellAction" id="row6action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row6key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row6btn"    position="310px 0px" text="Run" onClick="onTrigger6"/>
+                <Button profile="rfccRebindBtn" id="row6rebind" position="400px 0px" text="Rebind" onClick="onRebind6"/>
             </GuiElement>
 
             <!-- Row 7 -->
@@ -135,6 +143,7 @@
                 <Text   profile="rfccCellAction" id="row7action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row7key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row7btn"    position="310px 0px" text="Run" onClick="onTrigger7"/>
+                <Button profile="rfccRebindBtn" id="row7rebind" position="400px 0px" text="Rebind" onClick="onRebind7"/>
             </GuiElement>
 
             <!-- Row 8 -->
@@ -143,6 +152,7 @@
                 <Text   profile="rfccCellAction" id="row8action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row8key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row8btn"    position="310px 0px" text="Run" onClick="onTrigger8"/>
+                <Button profile="rfccRebindBtn" id="row8rebind" position="400px 0px" text="Rebind" onClick="onRebind8"/>
             </GuiElement>
 
             <!-- Row 9 -->
@@ -151,6 +161,7 @@
                 <Text   profile="rfccCellAction" id="row9action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row9key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row9btn"    position="310px 0px" text="Run" onClick="onTrigger9"/>
+                <Button profile="rfccRebindBtn" id="row9rebind" position="400px 0px" text="Rebind" onClick="onRebind9"/>
             </GuiElement>
 
             <!-- Row 10 -->
@@ -159,6 +170,7 @@
                 <Text   profile="rfccCellAction" id="row10action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row10key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row10btn"    position="310px 0px" text="Run" onClick="onTrigger10"/>
+                <Button profile="rfccRebindBtn" id="row10rebind" position="400px 0px" text="Rebind" onClick="onRebind10"/>
             </GuiElement>
 
             <!-- Row 11 -->
@@ -167,6 +179,7 @@
                 <Text   profile="rfccCellAction" id="row11action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row11key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row11btn"    position="310px 0px" text="Run" onClick="onTrigger11"/>
+                <Button profile="rfccRebindBtn" id="row11rebind" position="400px 0px" text="Rebind" onClick="onRebind11"/>
             </GuiElement>
 
             <!-- Row 12 -->
@@ -175,6 +188,7 @@
                 <Text   profile="rfccCellAction" id="row12action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row12key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row12btn"    position="310px 0px" text="Run" onClick="onTrigger12"/>
+                <Button profile="rfccRebindBtn" id="row12rebind" position="400px 0px" text="Rebind" onClick="onRebind12"/>
             </GuiElement>
 
             <!-- Row 13 -->
@@ -183,6 +197,7 @@
                 <Text   profile="rfccCellAction" id="row13action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row13key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row13btn"    position="310px 0px" text="Run" onClick="onTrigger13"/>
+                <Button profile="rfccRebindBtn" id="row13rebind" position="400px 0px" text="Rebind" onClick="onRebind13"/>
             </GuiElement>
 
             <!-- Row 14 -->
@@ -191,6 +206,7 @@
                 <Text   profile="rfccCellAction" id="row14action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row14key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row14btn"    position="310px 0px" text="Run" onClick="onTrigger14"/>
+                <Button profile="rfccRebindBtn" id="row14rebind" position="400px 0px" text="Rebind" onClick="onRebind14"/>
             </GuiElement>
 
             <!-- Row 15 -->
@@ -199,6 +215,7 @@
                 <Text   profile="rfccCellAction" id="row15action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row15key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row15btn"    position="310px 0px" text="Run" onClick="onTrigger15"/>
+                <Button profile="rfccRebindBtn" id="row15rebind" position="400px 0px" text="Rebind" onClick="onRebind15"/>
             </GuiElement>
 
             <!-- Row 16 -->
@@ -207,6 +224,7 @@
                 <Text   profile="rfccCellAction" id="row16action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row16key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row16btn"    position="310px 0px" text="Run" onClick="onTrigger16"/>
+                <Button profile="rfccRebindBtn" id="row16rebind" position="400px 0px" text="Rebind" onClick="onRebind16"/>
             </GuiElement>
 
             <!-- Row 17 -->
@@ -215,6 +233,7 @@
                 <Text   profile="rfccCellAction" id="row17action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row17key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row17btn"    position="310px 0px" text="Run" onClick="onTrigger17"/>
+                <Button profile="rfccRebindBtn" id="row17rebind" position="400px 0px" text="Rebind" onClick="onRebind17"/>
             </GuiElement>
 
             <!-- Row 18 -->
@@ -223,6 +242,7 @@
                 <Text   profile="rfccCellAction" id="row18action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row18key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row18btn"    position="310px 0px" text="Run" onClick="onTrigger18"/>
+                <Button profile="rfccRebindBtn" id="row18rebind" position="400px 0px" text="Rebind" onClick="onRebind18"/>
             </GuiElement>
 
             <!-- Row 19 -->
@@ -231,6 +251,7 @@
                 <Text   profile="rfccCellAction" id="row19action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row19key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row19btn"    position="310px 0px" text="Run" onClick="onTrigger19"/>
+                <Button profile="rfccRebindBtn" id="row19rebind" position="400px 0px" text="Rebind" onClick="onRebind19"/>
             </GuiElement>
 
             <!-- Row 20 -->
@@ -239,6 +260,7 @@
                 <Text   profile="rfccCellAction" id="row20action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row20key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row20btn"    position="310px 0px" text="Run" onClick="onTrigger20"/>
+                <Button profile="rfccRebindBtn" id="row20rebind" position="400px 0px" text="Rebind" onClick="onRebind20"/>
             </GuiElement>
 
             <!-- Row 21 -->
@@ -247,6 +269,7 @@
                 <Text   profile="rfccCellAction" id="row21action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row21key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row21btn"    position="310px 0px" text="Run" onClick="onTrigger21"/>
+                <Button profile="rfccRebindBtn" id="row21rebind" position="400px 0px" text="Rebind" onClick="onRebind21"/>
             </GuiElement>
 
             <!-- Row 22 -->
@@ -255,6 +278,7 @@
                 <Text   profile="rfccCellAction" id="row22action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row22key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row22btn"    position="310px 0px" text="Run" onClick="onTrigger22"/>
+                <Button profile="rfccRebindBtn" id="row22rebind" position="400px 0px" text="Rebind" onClick="onRebind22"/>
             </GuiElement>
 
             <!-- Row 23 -->
@@ -263,6 +287,7 @@
                 <Text   profile="rfccCellAction" id="row23action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row23key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row23btn"    position="310px 0px" text="Run" onClick="onTrigger23"/>
+                <Button profile="rfccRebindBtn" id="row23rebind" position="400px 0px" text="Rebind" onClick="onRebind23"/>
             </GuiElement>
 
             <!-- Row 24 -->
@@ -271,6 +296,7 @@
                 <Text   profile="rfccCellAction" id="row24action" position="-120px -4px" text=""/>
                 <Text   profile="rfccCellKey"    id="row24key"    position="110px -4px" text=""/>
                 <Button profile="rfccTriggerBtn" id="row24btn"    position="310px 0px" text="Run" onClick="onTrigger24"/>
+                <Button profile="rfccRebindBtn" id="row24rebind" position="400px 0px" text="Rebind" onClick="onRebind24"/>
             </GuiElement>
 
             <Bitmap profile="rfccDivider" position="0px -600px"/>
@@ -292,7 +318,7 @@
         <BoxLayout profile="fs25_dialogButtonBox">
             <Button profile="buttonBack" id="closeButton" text="Back" onClick="onClickBack"/>
             <Button profile="buttonActivate" id="settingsButton" text="Settings" onClick="onClickSettings"/>
-            <Button profile="buttonActivate" id="rebindButton" text="Change Keys" onClick="onClickRebind"/>
+            <Button profile="buttonMenuSwitch" id="resetButton" text="Reset Keys" onClick="onClickReset"/>
         </BoxLayout>
 
     </GuiElement>
@@ -368,8 +394,18 @@
 
         <!-- Trigger button: fs25_wideButton, deliberately not buttonActivate -->
         <Profile name="rfccTriggerBtn" extends="fs25_wideButton" with="anchorTopCenter">
-            <size value="120px 20px"/>
+            <size value="100px 20px"/>
             <textSize value="12px"/>
+        </Profile>
+
+        <!-- Rebind button: narrower sibling of the trigger button. -->
+        <Profile name="rfccRebindBtn" extends="fs25_wideButton" with="anchorTopCenter">
+            <size value="76px 20px"/>
+            <textSize value="11px"/>
+        </Profile>
+        <Profile name="rfccHeadRebind" extends="rfccHeadModule">
+            <size value="76px 14px"/>
+            <textAlignment value="center"/>
         </Profile>
 
         <!-- Pagination -->

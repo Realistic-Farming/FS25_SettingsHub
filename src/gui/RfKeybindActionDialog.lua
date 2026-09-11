@@ -99,6 +99,7 @@ function RfKeybindActionDialog:onGuiSetupFinished()
             action = self:getDescendantById("row" .. n .. "action"),
             key    = self:getDescendantById("row" .. n .. "key"),
             button = self:getDescendantById("row" .. n .. "btn"),
+            rebind = self:getDescendantById("row" .. n .. "rebind"),
         }
     end
 end
@@ -128,26 +129,72 @@ function RfKeybindActionDialog:onClickSettings()
     end
 end
 
---- Sends the player to the base game menu, where key bindings actually live.
----
---- FS25 exposes no mod-callable way to write a binding. The engine source the
---- GIANTS extension extracts carries no input settings frame, the SDK ships only
---- inputActions.xml (a catalogue, not an API), and a sweep of all 1838 installed
---- mods found not one call to any binding setter on g_inputBinding: the whole
---- surface in use out there is action-event registration and help text. So the
---- Control Center reads bindings and hands rebinding back to the screen that
---- owns it rather than guessing at an engine call.
----
---- Nothing is lost by the round trip: the key column is read fresh on every
---- open, so a key changed in Controls shows here the next time it is summoned.
-function RfKeybindActionDialog:onClickRebind()
-    g_gui:closeDialogByName(RfKeybindActionDialog.CLASS_NAME)
-
-    -- The route the base game's own menu toggle takes.
-    local ok, err = pcall(function() g_gui:changeScreen(nil, InGameMenu) end)
-    if not ok then
-        SHLogger.error("Control Center: could not open the game menu: %s", tostring(err))
+--- Footer "Reset Keys": restores JUST the suite actions shown in this dialog to
+--- their mod-declared defaults, after a confirmation. Deliberately NOT the
+--- engine's restoreDefaultBindings(), which resets every control in the game.
+function RfKeybindActionDialog:onClickReset()
+    if g_inputBinding == nil then
+        self:showStatus("Rebinding is unavailable in this build.")
+        return
     end
+    if YesNoDialog ~= nil and YesNoDialog.show ~= nil then
+        YesNoDialog.show(self.onResetConfirm, self,
+            "Reset the Realistic Farming key bindings shown here to their defaults? "
+                .. "Other game controls are not affected.",
+            "Reset Key Bindings", "Reset", "Cancel")
+    else
+        self:onResetConfirm(true)
+    end
+end
+
+--- YesNoDialog callback (yes == true when the player confirmed).
+function RfKeybindActionDialog:onResetConfirm(yes)
+    if yes ~= true then return end
+    local n = self:_resetSuiteBindings()
+    self:refresh()
+    self:showStatus(string.format("Reset %d Realistic Farming key binding(s) to defaults.", n))
+end
+
+--- Resets only the suite actions in self.rows to their mod defaults, leaving all
+--- other keybinds untouched. Engine-native mechanism: clear each target action's
+--- bindings and its bindingsKnown flag, then loadModBindingDefaults() re-adds the
+--- modDesc default for exactly the actions now marked unknown (every other action
+--- keeps bindingsKnown = true and is skipped). Verified against InputBinding
+--- loadActionBindingsFromXMLPath / loadModBindingDefaults / deleteBinding.
+---@return number reset count
+function RfKeybindActionDialog:_resetSuiteBindings()
+    local ib = g_inputBinding
+    if ib == nil or ib.getActionByName == nil then return 0 end
+
+    local touched = {}
+    for _, row in ipairs(self.rows) do
+        local action = ib:getActionByName(row.action)
+        if action ~= nil and action.getBindings ~= nil and touched[row.action] == nil then
+            touched[row.action] = action
+            -- Delete a snapshot of the action's current bindings (deleteBinding
+            -- mutates the live list, so iterate a copy).
+            local snapshot = {}
+            for _, b in pairs(action:getBindings()) do snapshot[#snapshot + 1] = b end
+            for _, b in ipairs(snapshot) do
+                pcall(function() ib:deleteBinding(b.deviceId, row.action, b.index, b.axisComponent) end)
+            end
+            action.bindingsKnown = false   -- so loadModBindingDefaults refills this one
+        end
+    end
+
+    local count = 0
+    for _ in pairs(touched) do count = count + 1 end
+    if count == 0 then return 0 end
+
+    -- Re-add mod defaults for the (now unknown) suite actions only.
+    pcall(function() ib:loadModBindingDefaults() end)
+    -- Restore the invariant: these actions have known bindings again.
+    for _, action in pairs(touched) do action.bindingsKnown = true end
+
+    -- Apply live (assignActionPrimaryBindings + refreshEventCollections) and persist.
+    pcall(function() ib:commitBindingChanges() end)
+    pcall(function() ib:saveToXMLFile() end)
+    return count
 end
 
 --- One-shot probe of the live input API surface, written to log.txt the first
@@ -270,6 +317,10 @@ function RfKeybindActionDialog:paintSlot(slot, row)
             cells.button:setText(caption or "Run")
         end
     end
+
+    -- Every real row is a rebindable action, so its Rebind button is always
+    -- shown. Keybinds are client-local, so no admin gate is needed here.
+    if cells.rebind ~= nil then cells.rebind:setVisible(true) end
 end
 
 function RfKeybindActionDialog:clearSlot(slot)
@@ -280,6 +331,7 @@ function RfKeybindActionDialog:clearSlot(slot)
     if cells.action ~= nil then cells.action:setText("") end
     if cells.key    ~= nil then cells.key:setText("") end
     if cells.button ~= nil then cells.button:setVisible(false) end
+    if cells.rebind ~= nil then cells.rebind:setVisible(false) end
 end
 
 function RfKeybindActionDialog:paintFooter()
@@ -396,6 +448,176 @@ function RfKeybindActionDialog:onTrigger21() self:triggerSlot(22) end
 function RfKeybindActionDialog:onTrigger22() self:triggerSlot(23) end
 function RfKeybindActionDialog:onTrigger23() self:triggerSlot(24) end
 function RfKeybindActionDialog:onTrigger24() self:triggerSlot(25) end
+
+-- === Inline rebinding (keyboard, primary binding) ========
+-- v1 scope: capture ONE keyboard key/combo for a row's action and write it as
+-- the primary keyboard binding. Gamepad, mouse axes and combo-mask editing are
+-- left to the base Controls page (the [Change Keys] button). The whole chain is
+-- the base game's own (ControlsController): startBindingChanges -> startInputCapture
+-- -> updateBinding (else addBinding) -> commitBindingChanges + saveToXMLFile.
+-- Keybinds are client-local, so there is no server round trip and no admin gate.
+
+--- Enters "press a key" capture for the action behind a visible slot.
+function RfKeybindActionDialog:beginRebind(slot)
+    if self.rebindActive then return end
+
+    local row = self.rows[self.pageIndex * RfKeybindActionDialog.ROWS + slot]
+    if row == nil then return end
+
+    if not RfInputContextGuard.hasLiveMission() then
+        self:showStatus("No active game to rebind in.")
+        return
+    end
+    if g_inputBinding == nil or InputAction == nil or InputAction[row.action] == nil then
+        self:showStatus("That action cannot be rebound here.")
+        return
+    end
+    if InputDevice == nil or Binding == nil then
+        self:showStatus("Rebinding is unavailable in this build.")
+        return
+    end
+
+    local action = g_inputBinding:getActionByName(row.action)
+    if action == nil then
+        self:showStatus("Action not found.")
+        return
+    end
+
+    -- Replace the existing primary keyboard binding if there is one; else append.
+    local kbDev = InputDevice.DEFAULT_DEVICE_NAMES.KB_MOUSE_DEFAULT
+    local bindingIndex = 1
+    if action.getBindings ~= nil then
+        local ok, bindings = pcall(function() return action:getBindings() end)
+        if ok and type(bindings) == "table" then
+            for _, b in pairs(bindings) do
+                if b.deviceId == kbDev and b.axisComponent == Binding.AXIS_COMPONENT.POSITIVE then
+                    bindingIndex = b.index or bindingIndex
+                    break
+                end
+            end
+        end
+    end
+
+    self.rebindActive    = true
+    self.rebindCommitted = false
+    self.rebindState = { action = row.action, label = row.label, kbDev = kbDev,
+                         bindingIndex = bindingIndex, keys = {} }
+
+    local ok = pcall(function() g_inputBinding:startBindingChanges() end)
+    if not ok then
+        self.rebindActive = false
+        self:showStatus("Could not start rebinding. See log.txt.")
+        return
+    end
+
+    self:showStatus("Press a key for '" .. tostring(row.label) .. "'   (Esc to cancel)")
+
+    -- Keyboard capture. Callback shape (verified against InputBinding:startInputCapture):
+    --   inputCallback(target, deviceId, axisName, inputValue, initInputValue, state)
+    --   abortCallback(target) ; deleteCallback(target, state)
+    pcall(function()
+        g_inputBinding:startInputCapture(true, false, self, self.rebindState,
+            self.onRebindCapture, self.onRebindAbort, self.onRebindDelete)
+    end)
+end
+
+--- Gathers held keys; assigns on release (inputValue == 0).
+function RfKeybindActionDialog:onRebindCapture(_deviceId, keyName, inputValue, _initValue, state)
+    if state == nil then return end
+    if (inputValue or 0) > 0 then
+        if keyName ~= nil then
+            local seen = false
+            for _, k in ipairs(state.keys) do if k == keyName then seen = true break end end
+            if not seen then table.insert(state.keys, keyName) end
+        end
+        return
+    end
+    self:_assignRebind(state)
+end
+
+function RfKeybindActionDialog:onRebindAbort()
+    self:_finishRebind(false, "Rebind cancelled.")
+end
+
+function RfKeybindActionDialog:onRebindDelete(_state)
+    -- v1 leaves the existing binding rather than clearing it (delete/clear is a
+    -- base-Controls concern); treat as a cancel.
+    self:_finishRebind(false, "Rebind cancelled.")
+end
+
+--- Writes the gathered keys as the action's primary keyboard binding.
+function RfKeybindActionDialog:_assignRebind(state)
+    if state == nil or #state.keys == 0 then
+        self:_finishRebind(false, "No key captured.")
+        return
+    end
+
+    local kbDev  = state.kbDev
+    local axisC  = Binding.AXIS_COMPONENT.POSITIVE
+    local inputC = Binding.INPUT_COMPONENT.POSITIVE
+    local action = g_inputBinding:getActionByName(state.action)
+
+    -- Try to replace the existing binding at bindingIndex; addBinding if none.
+    local success, collision, blockAdd = false, nil, false
+    local pok, r1, r2, r3 = pcall(function()
+        return g_inputBinding:updateBinding(kbDev, state.action, state.bindingIndex, axisC,
+                                            kbDev, state.keys, inputC, 0)
+    end)
+    if pok then success, collision, blockAdd = r1, r2, r3 end
+
+    if not success and not blockAdd and action ~= nil then
+        local aok, added, coll = pcall(function()
+            local binding = Binding.new(kbDev, state.keys, axisC, inputC, 0, state.bindingIndex)
+            return g_inputBinding:addBinding(action, binding)
+        end)
+        if aok then
+            success  = added
+            collision = collision or coll
+        end
+    end
+
+    if blockAdd then
+        self:_finishRebind(false, "That key is already bound to this action.")
+        return
+    end
+    if not success then
+        self:_finishRebind(false, "Could not set that key.")
+        return
+    end
+
+    -- commitBindingChanges applies it live; saveToXMLFile persists across restart.
+    pcall(function() g_inputBinding:commitBindingChanges() end)
+    pcall(function() g_inputBinding:saveToXMLFile() end)
+    self.rebindCommitted = true
+
+    local msg = "'" .. tostring(state.label) .. "' rebound."
+    if collision ~= nil then msg = msg .. " (took a key from another action)" end
+    self:_finishRebind(true, msg)
+end
+
+--- Ends capture, rolls back if nothing was committed, and repaints so the Key
+--- column shows the new chord.
+function RfKeybindActionDialog:_finishRebind(committed, statusMsg)
+    if g_inputBinding ~= nil then
+        pcall(function() g_inputBinding:stopInputGathering() end)
+        if not (committed or self.rebindCommitted) then
+            pcall(function() g_inputBinding:rollbackBindingChanges() end)
+        end
+    end
+    self.rebindActive    = false
+    self.rebindState     = nil
+    self.rebindCommitted = false
+
+    self:refresh()   -- re-reads chords via RfActionRegistry.getRows
+    if statusMsg ~= nil then self:showStatus(statusMsg) end
+end
+
+-- Generate the fixed-pool rebind handlers (onRebind0..N) the XML binds by name.
+-- Assigned onto the class table so a re-source refreshes them idempotently.
+for i = 0, RfKeybindActionDialog.ROWS - 1 do
+    local slot = i + 1
+    RfKeybindActionDialog["onRebind" .. i] = function(self) self:beginRebind(slot) end
+end
 
 -- ---------------------------------------------------------
 -- Delivery print (Wizard hot-reload law). Every push must announce itself:
