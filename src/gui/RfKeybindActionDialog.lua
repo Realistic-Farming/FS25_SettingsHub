@@ -119,6 +119,15 @@ function RfKeybindActionDialog:onClickBack()
     g_gui:closeDialogByName(RfKeybindActionDialog.CLASS_NAME)
 end
 
+--- Swap to the Settings tab. Closes this dialog first so the settings dialog
+--- opens with clean input focus rather than stacked behind the keybind view.
+function RfKeybindActionDialog:onClickSettings()
+    g_gui:closeDialogByName(RfKeybindActionDialog.CLASS_NAME)
+    if RfSettingsDialog ~= nil and RfSettingsDialog.show ~= nil then
+        RfSettingsDialog.show()
+    end
+end
+
 --- Sends the player to the base game menu, where key bindings actually live.
 ---
 --- FS25 exposes no mod-callable way to write a binding. The engine source the

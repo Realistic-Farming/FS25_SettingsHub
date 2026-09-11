@@ -467,6 +467,24 @@ function SettingsHub:_saveLocalFile()
 end
 
 -- =========================================================
+-- Admin gate (presentation helper for the editing UIs)
+-- =========================================================
+
+-- True when the LOCAL player may change an adminOnly setting: the host
+-- (single-player or listen-server) or a granted master user on a client. This
+-- is the exact predicate the base game uses to gate admin-only actions
+-- (g_currentMission:getIsServer() or g_currentMission.isMasterUser); verified
+-- against dataS/scripts_decompiled (FSBaseMission, FarmlandManager).
+--
+-- Presentation ONLY. The server re-checks master rights on receipt in
+-- SettingsHubAdminEvent:run and is the sole authority; a client that lies here
+-- still has its admin change rejected server-side.
+function SettingsHub:isLocalAdmin()
+    if g_currentMission == nil then return false end
+    return g_currentMission:getIsServer() == true or g_currentMission.isMasterUser == true
+end
+
+-- =========================================================
 -- FarmTablet surface (read-only model for the System Settings app)
 -- =========================================================
 
