@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!--
+    RfSettingsDialog - FS25_SettingsHub
+    The Realistic Farming Control Center: Settings tab.
+
+    Sibling of RfKeybindActionDialog. Same proven idiom: a fixed pool of row
+    elements declared here and filled from Lua, with pagination instead of
+    runtime element creation. Rows are flattened from g_settingsHub:getModules()
+    (every registered setting across the suite), and each row edits through the
+    shipped g_settingsHub:setValue write path (validate -> route by scope ->
+    persist -> sync). Admin (server-shared) settings are editable only for the
+    host / a master user; locked and greyed for everyone else.
+
+    COLUMN GEOMETRY. Row container 880px wide, half-width 440. Anchored at the
+    element centre, widths matched between header and data cell per column.
+
+      Column    Width   Centre
+      Module    150px   -350px
+      Setting   320px   -110px
+      Value     110px   +240px
+      [-] step   34px   +330px
+      [+] step   34px   +378px
+
+    Rightmost edge +395px, inside the 440px half-width.
+
+    Step buttons extend fs25_wideButton, NOT buttonActivate: buttonActivate
+    inherits MENU_ACTIVATE and paints a SPACE chip that shoves its label out of
+    the box. Proven live 2026-08-22 on the keybind dialog.
+-->
+<GUI onOpen="onOpen" onClose="rfsOnClose" onCreate="onCreate">
+    <GuiElement profile="newLayer"/>
+    <Bitmap profile="dialogFullscreenBg" id="dialogBg"/>
+
+    <GuiElement profile="rfsDialogBg" id="dialogElement">
+        <ThreePartBitmap profile="fs25_dialogBgMiddle"/>
+        <ThreePartBitmap profile="fs25_dialogBgTop"/>
+        <ThreePartBitmap profile="fs25_dialogBgBottom"/>
+
+        <GuiElement profile="fs25_dialogContentContainer">
+
+            <!-- Title -->
+            <Text profile="rfsTitle" id="rfsTitleText" position="0px -18px" text="Realistic Farming Settings"/>
+
+            <Bitmap profile="rfsDivider" position="0px -50px"/>
+
+            <!-- Column headers -->
+            <GuiElement profile="rfsHeaderRow" position="0px -60px">
+                <Text profile="rfsHeadModule"  id="colModuleHeader"  position="-350px -5px" text="Module"/>
+                <Text profile="rfsHeadSetting" id="colSettingHeader" position="-110px -5px" text="Setting"/>
+                <Text profile="rfsHeadValue"   id="colValueHeader"   position="240px -5px" text="Value"/>
+                <Text profile="rfsHeadCtrl"    id="colCtrlHeader"    position="354px -5px" text="Change"/>
+            </GuiElement>
+
+            <Bitmap profile="rfsDivider" position="0px -84px"/>
+
+            <!-- Row 0 -->
+            <GuiElement profile="rfsRow" position="0px -92px">
+                <Text   profile="rfsCellModule"  id="row0module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row0setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row0value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row0dec"     position="330px 0px" text="-" onClick="onDec0"/>
+                <Button profile="rfsStepBtn"     id="row0inc"     position="378px 0px" text="+" onClick="onInc0"/>
+            </GuiElement>
+
+            <!-- Row 1 -->
+            <GuiElement profile="rfsRow" position="0px -116px">
+                <Text   profile="rfsCellModule"  id="row1module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row1setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row1value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row1dec"     position="330px 0px" text="-" onClick="onDec1"/>
+                <Button profile="rfsStepBtn"     id="row1inc"     position="378px 0px" text="+" onClick="onInc1"/>
+            </GuiElement>
+
+            <!-- Row 2 -->
+            <GuiElement profile="rfsRow" position="0px -140px">
+                <Text   profile="rfsCellModule"  id="row2module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row2setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row2value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row2dec"     position="330px 0px" text="-" onClick="onDec2"/>
+                <Button profile="rfsStepBtn"     id="row2inc"     position="378px 0px" text="+" onClick="onInc2"/>
+            </GuiElement>
+
+            <!-- Row 3 -->
+            <GuiElement profile="rfsRow" position="0px -164px">
+                <Text   profile="rfsCellModule"  id="row3module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row3setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row3value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row3dec"     position="330px 0px" text="-" onClick="onDec3"/>
+                <Button profile="rfsStepBtn"     id="row3inc"     position="378px 0px" text="+" onClick="onInc3"/>
+            </GuiElement>
+
+            <!-- Row 4 -->
+            <GuiElement profile="rfsRow" position="0px -188px">
+                <Text   profile="rfsCellModule"  id="row4module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row4setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row4value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row4dec"     position="330px 0px" text="-" onClick="onDec4"/>
+                <Button profile="rfsStepBtn"     id="row4inc"     position="378px 0px" text="+" onClick="onInc4"/>
+            </GuiElement>
+
+            <!-- Row 5 -->
+            <GuiElement profile="rfsRow" position="0px -212px">
+                <Text   profile="rfsCellModule"  id="row5module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row5setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row5value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row5dec"     position="330px 0px" text="-" onClick="onDec5"/>
+                <Button profile="rfsStepBtn"     id="row5inc"     position="378px 0px" text="+" onClick="onInc5"/>
+            </GuiElement>
+
+            <!-- Row 6 -->
+            <GuiElement profile="rfsRow" position="0px -236px">
+                <Text   profile="rfsCellModule"  id="row6module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row6setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row6value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row6dec"     position="330px 0px" text="-" onClick="onDec6"/>
+                <Button profile="rfsStepBtn"     id="row6inc"     position="378px 0px" text="+" onClick="onInc6"/>
+            </GuiElement>
+
+            <!-- Row 7 -->
+            <GuiElement profile="rfsRow" position="0px -260px">
+                <Text   profile="rfsCellModule"  id="row7module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row7setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row7value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row7dec"     position="330px 0px" text="-" onClick="onDec7"/>
+                <Button profile="rfsStepBtn"     id="row7inc"     position="378px 0px" text="+" onClick="onInc7"/>
+            </GuiElement>
+
+            <!-- Row 8 -->
+            <GuiElement profile="rfsRow" position="0px -284px">
+                <Text   profile="rfsCellModule"  id="row8module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row8setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row8value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row8dec"     position="330px 0px" text="-" onClick="onDec8"/>
+                <Button profile="rfsStepBtn"     id="row8inc"     position="378px 0px" text="+" onClick="onInc8"/>
+            </GuiElement>
+
+            <!-- Row 9 -->
+            <GuiElement profile="rfsRow" position="0px -308px">
+                <Text   profile="rfsCellModule"  id="row9module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row9setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row9value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row9dec"     position="330px 0px" text="-" onClick="onDec9"/>
+                <Button profile="rfsStepBtn"     id="row9inc"     position="378px 0px" text="+" onClick="onInc9"/>
+            </GuiElement>
+
+            <!-- Row 10 -->
+            <GuiElement profile="rfsRow" position="0px -332px">
+                <Text   profile="rfsCellModule"  id="row10module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row10setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row10value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row10dec"     position="330px 0px" text="-" onClick="onDec10"/>
+                <Button profile="rfsStepBtn"     id="row10inc"     position="378px 0px" text="+" onClick="onInc10"/>
+            </GuiElement>
+
+            <!-- Row 11 -->
+            <GuiElement profile="rfsRow" position="0px -356px">
+                <Text   profile="rfsCellModule"  id="row11module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row11setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row11value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row11dec"     position="330px 0px" text="-" onClick="onDec11"/>
+                <Button profile="rfsStepBtn"     id="row11inc"     position="378px 0px" text="+" onClick="onInc11"/>
+            </GuiElement>
+
+            <!-- Row 12 -->
+            <GuiElement profile="rfsRow" position="0px -380px">
+                <Text   profile="rfsCellModule"  id="row12module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row12setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row12value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row12dec"     position="330px 0px" text="-" onClick="onDec12"/>
+                <Button profile="rfsStepBtn"     id="row12inc"     position="378px 0px" text="+" onClick="onInc12"/>
+            </GuiElement>
+
+            <!-- Row 13 -->
+            <GuiElement profile="rfsRow" position="0px -404px">
+                <Text   profile="rfsCellModule"  id="row13module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row13setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row13value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row13dec"     position="330px 0px" text="-" onClick="onDec13"/>
+                <Button profile="rfsStepBtn"     id="row13inc"     position="378px 0px" text="+" onClick="onInc13"/>
+            </GuiElement>
+
+            <!-- Row 14 -->
+            <GuiElement profile="rfsRow" position="0px -428px">
+                <Text   profile="rfsCellModule"  id="row14module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row14setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row14value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row14dec"     position="330px 0px" text="-" onClick="onDec14"/>
+                <Button profile="rfsStepBtn"     id="row14inc"     position="378px 0px" text="+" onClick="onInc14"/>
+            </GuiElement>
+
+            <!-- Row 15 -->
+            <GuiElement profile="rfsRow" position="0px -452px">
+                <Text   profile="rfsCellModule"  id="row15module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row15setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row15value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row15dec"     position="330px 0px" text="-" onClick="onDec15"/>
+                <Button profile="rfsStepBtn"     id="row15inc"     position="378px 0px" text="+" onClick="onInc15"/>
+            </GuiElement>
+
+            <!-- Row 16 -->
+            <GuiElement profile="rfsRow" position="0px -476px">
+                <Text   profile="rfsCellModule"  id="row16module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row16setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row16value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row16dec"     position="330px 0px" text="-" onClick="onDec16"/>
+                <Button profile="rfsStepBtn"     id="row16inc"     position="378px 0px" text="+" onClick="onInc16"/>
+            </GuiElement>
+
+            <!-- Row 17 -->
+            <GuiElement profile="rfsRow" position="0px -500px">
+                <Text   profile="rfsCellModule"  id="row17module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row17setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row17value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row17dec"     position="330px 0px" text="-" onClick="onDec17"/>
+                <Button profile="rfsStepBtn"     id="row17inc"     position="378px 0px" text="+" onClick="onInc17"/>
+            </GuiElement>
+
+            <!-- Row 18 -->
+            <GuiElement profile="rfsRow" position="0px -524px">
+                <Text   profile="rfsCellModule"  id="row18module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row18setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row18value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row18dec"     position="330px 0px" text="-" onClick="onDec18"/>
+                <Button profile="rfsStepBtn"     id="row18inc"     position="378px 0px" text="+" onClick="onInc18"/>
+            </GuiElement>
+
+            <!-- Row 19 -->
+            <GuiElement profile="rfsRow" position="0px -548px">
+                <Text   profile="rfsCellModule"  id="row19module"  position="-350px -4px" text=""/>
+                <Text   profile="rfsCellSetting" id="row19setting" position="-110px -4px" text=""/>
+                <Text   profile="rfsCellValue"   id="row19value"   position="240px -4px" text=""/>
+                <Button profile="rfsStepBtn"     id="row19dec"     position="330px 0px" text="-" onClick="onDec19"/>
+                <Button profile="rfsStepBtn"     id="row19inc"     position="378px 0px" text="+" onClick="onInc19"/>
+            </GuiElement>
+
+            <Bitmap profile="rfsDivider" position="0px -576px"/>
+
+            <!-- Pagination -->
+            <GuiElement profile="rfsRow" position="0px -584px">
+                <Button profile="rfsPageBtn" id="prevPageBtn" position="-120px 0px" text="&lt;" onClick="onPrevPage"/>
+                <Text   profile="rfsPageLabel" id="pageLabel"  position="0px -4px" text=""/>
+                <Button profile="rfsPageBtn" id="nextPageBtn" position="120px 0px" text="&gt;" onClick="onNextPage"/>
+            </GuiElement>
+
+            <Bitmap profile="rfsDivider" position="0px -614px"/>
+
+            <Text profile="rfsHint"   id="summonHint" position="0px -622px" text=""/>
+            <Text profile="rfsStatus" id="statusText" position="0px -642px" text=""/>
+
+        </GuiElement>
+
+        <BoxLayout profile="fs25_dialogButtonBox">
+            <Button profile="buttonBack" id="closeButton" text="Back" onClick="onClickBack"/>
+            <Button profile="buttonActivate" id="keybindsButton" text="Keybinds" onClick="onClickKeybinds"/>
+        </BoxLayout>
+
+    </GuiElement>
+
+    <GUIProfiles>
+
+        <Profile name="rfsDialogBg" extends="fs25_dialogBg">
+            <size value="1000px 880px"/>
+        </Profile>
+
+        <Profile name="rfsTitle" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="880px 24px"/>
+            <textSize value="20px"/>
+            <textBold value="true"/>
+            <textColor value="1 1 1 1"/>
+            <textAlignment value="center"/>
+        </Profile>
+
+        <Profile name="rfsDivider" extends="baseReference" with="anchorTopCenter">
+            <size value="880px 1px"/>
+            <imageColor value="0.3 0.35 0.45 0.8"/>
+        </Profile>
+
+        <Profile name="rfsHeaderRow" extends="emptyPanel" with="anchorTopCenter">
+            <size value="880px 20px"/>
+        </Profile>
+        <Profile name="rfsRow" extends="emptyPanel" with="anchorTopCenter">
+            <size value="880px 22px"/>
+        </Profile>
+
+        <Profile name="rfsHeadModule" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="150px 14px"/>
+            <textSize value="11px"/>
+            <textBold value="true"/>
+            <textUpperCase value="true"/>
+            <textColor value="0.55 0.7 0.9 1"/>
+            <textAlignment value="left"/>
+        </Profile>
+        <Profile name="rfsHeadSetting" extends="rfsHeadModule">
+            <size value="320px 14px"/>
+        </Profile>
+        <Profile name="rfsHeadValue" extends="rfsHeadModule">
+            <size value="110px 14px"/>
+        </Profile>
+        <Profile name="rfsHeadCtrl" extends="rfsHeadModule">
+            <size value="90px 14px"/>
+            <textAlignment value="center"/>
+        </Profile>
+
+        <Profile name="rfsCellModule" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="150px 16px"/>
+            <textSize value="12px"/>
+            <textAlignment value="left"/>
+            <textColor value="0.7 0.78 0.9 1"/>
+        </Profile>
+        <Profile name="rfsCellSetting" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="320px 16px"/>
+            <textSize value="13px"/>
+            <textAlignment value="left"/>
+            <textColor value="1 1 1 1"/>
+        </Profile>
+        <Profile name="rfsCellValue" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="110px 16px"/>
+            <textSize value="13px"/>
+            <textAlignment value="left"/>
+            <textColor value="0.9 0.75 0.2 1"/>
+        </Profile>
+
+        <Profile name="rfsStepBtn" extends="fs25_wideButton" with="anchorTopCenter">
+            <size value="34px 20px"/>
+            <textSize value="14px"/>
+        </Profile>
+
+        <Profile name="rfsPageBtn" extends="fs25_wideButton" with="anchorTopCenter">
+            <size value="48px 22px"/>
+            <textSize value="12px"/>
+        </Profile>
+        <Profile name="rfsPageLabel" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="240px 16px"/>
+            <textSize value="12px"/>
+            <textAlignment value="center"/>
+            <textColor value="0.82 0.82 0.82 1"/>
+        </Profile>
+
+        <Profile name="rfsHint" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="880px 16px"/>
+            <textSize value="12px"/>
+            <textAlignment value="center"/>
+            <textColor value="1 1 1 0.7"/>
+        </Profile>
+        <Profile name="rfsStatus" extends="fs25_textDefault" with="anchorTopCenter">
+            <size value="880px 16px"/>
+            <textSize value="12px"/>
+            <textAlignment value="center"/>
+            <textColor value="0.35 0.88 0.42 1"/>
+        </Profile>
+
+    </GUIProfiles>
+</GUI>

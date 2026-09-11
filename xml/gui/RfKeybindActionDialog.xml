@@ -291,6 +291,7 @@
 
         <BoxLayout profile="fs25_dialogButtonBox">
             <Button profile="buttonBack" id="closeButton" text="Back" onClick="onClickBack"/>
+            <Button profile="buttonActivate" id="settingsButton" text="Settings" onClick="onClickSettings"/>
             <Button profile="buttonActivate" id="rebindButton" text="Change Keys" onClick="onClickRebind"/>
         </BoxLayout>
 
