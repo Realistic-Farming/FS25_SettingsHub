@@ -4,9 +4,7 @@
 -- Registers the master summon action in both the on-foot and in-vehicle input
 -- contexts, so the Control Center answers the same key wherever the player is.
 --
--- Shape copied from FS25_MasterHUD/main.lua, which is the pattern proven live
--- across Soil, FuelCosts and RWE. The two halves are not symmetrical for a
--- reason:
+-- RSF-F201 (context-qualified input). The two halves are still not symmetrical:
 --
 --   ON FOOT  wrap PlayerInputComponent.registerActionEvents at MODULE LOAD.
 --            It has to be wrapped before the first registerActionEvents fires,
@@ -16,12 +14,18 @@
 --            spec functions are copied onto each instance at spawn, so patching
 --            the class afterwards is silently ignored.
 --
--- Both paths re-register on every rebuild with no teardown and no stale-id
--- early return. A context is destroyed and rebuilt on spawn and on every
--- vehicle entry, which kills saved event ids while leaving them non-nil, and
--- guarding on non-nil is exactly how keys go dead in the cab. Re-registering
--- into a context that already holds the action fails silently by design, so
--- attempting every time is the safe shape.
+-- What changed under F201, and why:
+--   * Each context registers through its own private forwarding target. The
+--     engine keys an event by action, target and trigger shape only, so one
+--     shared target made the PLAYER and VEHICLE registrations a single global
+--     slot that vehicle entry wiped. Separate targets separate the slots.
+--   * Membership is asked of the wrap's own context by walking the native
+--     lists, never inferred from a non-nil stored id, and a complete set means
+--     no registration transaction at all. The old shape retried the same valid
+--     vehicle context on every close of that context.
+--   * The captured predecessors are held on this module table for the whole
+--     session and never restored per mission. Mission teardown only retires the
+--     current owner and makes old targets inert.
 --
 -- Callbacks ignore a zero inputValue, which is key-up.
 -- =========================================================
@@ -30,97 +34,88 @@ RfControlCenterInput = RfControlCenterInput or {}
 
 local ACTION = "RF_OPEN_CONTROL_CENTER"
 
-local playerEventId  = nil
-local vehicleEventId = nil
+-- F201 item 12: the persistent hook record lives on this module table, which
+-- already carried the install latch and survives mission teardown.
+local record = RfContextInput.record(RfControlCenterInput, "_f201Input")
 
-local function onSummon(_, _, inputValue)
+--- Summon handler. Resolved on the owner (this module) at call time by the
+--- forwarding target, with the engine's argument sequence untouched.
+function RfControlCenterInput.onSummon(_, _, inputValue)
     if (inputValue or 0) <= 0 then return end
     RfKeybindActionDialog.show()
 end
 
-local function registerInPlayerContext()
-    if g_inputBinding == nil then return end
+-- The input-help legend is the one surface that always shows the LIVE binding,
+-- the same source Controls reads, so the row is left visible rather than
+-- hidden behind a default that may not exist.
+local function afterPlayer(binding, eventId)
+    binding:setActionEventActive(eventId, true)
+    binding:setActionEventTextVisibility(eventId, true)
+end
+
+local function afterVehicle(binding, eventId)
+    binding:setActionEventTextVisibility(eventId, true)
+    SHLogger.info("%s registered in VEHICLE context", ACTION)
+end
+
+local PLAYER_SPECS = {
+    { action = ACTION, handler = "onSummon", idField = "playerEventId",
+      up = false, down = true, always = false, startActive = true, after = afterPlayer },
+}
+
+local VEHICLE_SPECS = {
+    { action = ACTION, handler = "onSummon", idField = "vehicleEventId",
+      up = false, down = true, always = false, startActive = true, after = afterVehicle },
+}
+
+--- Installs both wrappers once per loaded script environment. A second call is
+--- a no-op, so a hot reload cannot stack a second wrapper on top of the first.
+function RfControlCenterInput.install()
+    if record.installed then return end
+    record.installed = true
+
     if InputAction == nil or InputAction[ACTION] == nil then
         SHLogger.warning("InputAction %s missing - check modDesc <actions>", ACTION)
-        return
     end
 
-    g_inputBinding:beginActionEventsModification(PlayerInputComponent.INPUT_CONTEXT_NAME)
-
-    local ok, eventId = g_inputBinding:registerActionEvent(
-        InputAction[ACTION], RfControlCenterInput, onSummon,
-        false, true, false, true
-    )
-    if ok and eventId ~= nil then
-        playerEventId = eventId
-        g_inputBinding:setActionEventActive(eventId, true)
-        -- The input-help legend is the one surface that always shows the LIVE
-        -- binding, the same source Controls reads, so the row is left visible
-        -- rather than hidden behind a default that may not exist.
-        g_inputBinding:setActionEventTextVisibility(eventId, true)
-    end
-
-    g_inputBinding:endActionEventsModification()
-end
-
-local function registerInVehicleContext(binding)
-    if binding == nil or InputAction == nil or InputAction[ACTION] == nil then return end
-
-    binding:beginActionEventsModification(Vehicle.INPUT_CONTEXT_NAME)
-
-    local ok, eventId = binding:registerActionEvent(
-        InputAction[ACTION], RfControlCenterInput, onSummon,
-        false, true, false, true
-    )
-    if ok and eventId ~= nil then
-        vehicleEventId = eventId
-        binding:setActionEventTextVisibility(eventId, true)
-        SHLogger.info("%s registered in VEHICLE context", ACTION)
-    end
-
-    binding:endActionEventsModification()
-end
-
---- Installs both hooks. Idempotent: a second call is a no-op, so a hot reload
---- cannot stack a second wrapper on top of the first.
-function RfControlCenterInput.install()
-    if RfControlCenterInput._installed then return end
-    RfControlCenterInput._installed = true
-
-    if PlayerInputComponent ~= nil and PlayerInputComponent.registerActionEvents ~= nil then
-        local origFn = PlayerInputComponent.registerActionEvents
-        PlayerInputComponent.registerActionEvents = function(inputComponent, ...)
-            origFn(inputComponent, ...)
-            local isOwner = inputComponent.player ~= nil and inputComponent.player.isOwner
-            if isOwner then
-                registerInPlayerContext()
-            end
-        end
+    if RfContextInput.installPlayerWrapper(record, PLAYER_SPECS) then
         SHLogger.info("PlayerInputComponent hook installed (Control Center)")
     else
         SHLogger.warning("PlayerInputComponent.registerActionEvents unavailable - on-foot Control Center key disabled")
     end
 
-    if InputBinding ~= nil and InputBinding.endActionEventsModification ~= nil then
-        local hookActive = false
-        local origEnd = InputBinding.endActionEventsModification
-        InputBinding.endActionEventsModification = function(binding, ignoreCheck)
-            local contextName = ""
-            if binding.registrationContext ~= nil
-                and binding.registrationContext ~= InputBinding.NO_REGISTRATION_CONTEXT then
-                contextName = binding.registrationContext.name or ""
-            end
-
-            origEnd(binding, ignoreCheck)
-
-            if Vehicle == nil or contextName ~= Vehicle.INPUT_CONTEXT_NAME then return end
-            if hookActive then return end
-            hookActive = true
-            registerInVehicleContext(binding)
-            hookActive = false
-        end
+    if RfContextInput.installVehicleWrapper(record, VEHICLE_SPECS) then
         SHLogger.info("InputBinding VEHICLE hook installed (Control Center)")
     else
         SHLogger.warning("InputBinding.endActionEventsModification unavailable - in-vehicle Control Center key disabled")
     end
+end
+
+--- Binds this module as the input owner of `mission` and creates fresh
+--- per-context forwarding targets. Called from main.lua's Mission00.load hook
+--- after the mission handle is assigned. Installs nothing.
+function RfControlCenterInput.activate(mission)
+    RfContextInput.activate(record, RfControlCenterInput, mission,
+        { [PlayerInputComponent.INPUT_CONTEXT_NAME] = PLAYER_SPECS,
+          [Vehicle.INPUT_CONTEXT_NAME] = VEHICLE_SPECS })
+end
+
+--- Post-load catch-up: one complete PLAYER reconciliation from the existing
+--- loadMission00Finished door, only if the local owning player and the native
+--- PLAYER context already exist. No context, no timer.
+function RfControlCenterInput.catchUp()
+    RfContextInput.catchUpPlayer(record, PLAYER_SPECS)
+end
+
+--- Clears the per-update attempt memo. First input act in onMissionUpdate.
+function RfControlCenterInput.resetAdmission()
+    RfContextInput.resetAdmission(record)
+end
+
+--- Mission retirement: old targets go inert and the owner is released. The
+--- captured predecessors stay installed for the next mission.
+function RfControlCenterInput.retire()
+    RfContextInput.retire(record)
+    RfControlCenterInput.playerEventId = nil
+    RfControlCenterInput.vehicleEventId = nil
 end
