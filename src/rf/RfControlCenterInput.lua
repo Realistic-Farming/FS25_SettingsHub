@@ -95,6 +95,7 @@ end
 --- per-context forwarding targets. Called from main.lua's Mission00.load hook
 --- after the mission handle is assigned. Installs nothing.
 function RfControlCenterInput.activate(mission)
+    if PlayerInputComponent == nil or Vehicle == nil then return end
     RfContextInput.activate(record, RfControlCenterInput, mission,
         { [PlayerInputComponent.INPUT_CONTEXT_NAME] = PLAYER_SPECS,
           [Vehicle.INPUT_CONTEXT_NAME] = VEHICLE_SPECS })

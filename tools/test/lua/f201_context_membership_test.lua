@@ -16,6 +16,9 @@
 -- official InputBinding.lua:4121-4129 context lists, PlayerInputComponent.lua:149-212.
 -- The mangled decompiled registerActionEvent body is deliberately NOT copied.
 
+-- The helper binds owners to g_currentMission; give the model a client mission so the
+-- test does not depend on which prelude ran first.
+g_currentMission = { getIsClient = function() return true end, getIsServer = function() return true end }
 local function pack(...) return { n = select('#', ...), ... } end
 local function noop() end
 local function eventId(action, target)
