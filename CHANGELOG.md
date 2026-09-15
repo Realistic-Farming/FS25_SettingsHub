@@ -13,6 +13,9 @@ the repo's git history and README.
 
 ## [Unreleased]
 
+### Fixed
+- RSF-F201: cab and on-foot controls stay valid across vehicle entry and exit. Each input context now registers through its own private target, so the PLAYER and VEHICLE registrations no longer share one engine identifier that a cab rebuild wiped. Membership is checked in the wrap's own context, a complete set costs no registration work, and the input wrappers install once per session instead of being restored on every mission teardown. Added the F201 context-membership test (tools/test/lua) re-pointed at production.
+
 ## [1.0.1.0] - 2026-08-26
 
 ### Added

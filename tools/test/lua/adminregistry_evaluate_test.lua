@@ -22,6 +22,7 @@ local farmsByUser = {
   [13] = { farmId = 0 },   -- spectator -> resolves to nil in the registry
 }
 
+g_currentMission = g_currentMission or {}
 g_currentMission.getIsServer = function() return true end
 g_currentMission.userManager = { getUserByUserId = function(_self, id) return usersById[id] end }
 g_farmManager = { getFarmByUserId = function(_self, id) return farmsByUser[id] end }
