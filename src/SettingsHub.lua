@@ -248,6 +248,55 @@ function SettingsHub:update(dt)
         end
         processed = processed + 1
     end
+
+    -- One-shot "suite is active" welcome message, a few seconds after load.
+    if self._welcomePending then
+        self._welcomeTimer = (self._welcomeTimer or 0) - dt
+        if self._welcomeTimer <= 0 then
+            self:_showWelcomeMessage()
+        end
+    end
+end
+
+-- Count the RF suite mods active this session: prefer the Control Center's own
+-- directory (distinct suite groups with a live action), fall back to the mods
+-- that registered settings with the hub.
+function SettingsHub:_countActiveMods()
+    if RfActionRegistry ~= nil and RfActionRegistry.getRows ~= nil then
+        local ok, rows = pcall(RfActionRegistry.getRows)
+        if ok and type(rows) == "table" then
+            local seen, n = {}, 0
+            for _, r in ipairs(rows) do
+                if r.group ~= nil and not seen[r.group] then
+                    seen[r.group] = true
+                    n = n + 1
+                end
+            end
+            if n > 0 then return n end
+        end
+    end
+    return #(self.registerOrder or {})
+end
+
+-- Show the one-shot "Realistic Farming Suite is running" note as a top-right side
+-- notification (a non-blocking toast, NOT a dialog or a centre-screen message, so
+-- it never overlaps a load dialog). Client HUD only - a dedicated server has none.
+function SettingsHub:_showWelcomeMessage()
+    local mission = g_currentMission
+    local hud     = mission ~= nil and mission.hud or nil
+    if hud == nil or hud.addSideNotification == nil then
+        self._welcomePending = false      -- no HUD (e.g. dedicated server): skip
+        return
+    end
+    local n     = self:_countActiveMods()
+    local color = (FSBaseMission ~= nil and FSBaseMission.INGAME_NOTIFICATION_OK) or nil
+    hud:addSideNotification(color,
+        string.format("Realistic Farming Suite is running  [%d mods active]", n),
+        8000)
+    self._welcomePending = false
+    if SHLogger ~= nil then
+        SHLogger.info("Suite notification shown (%d mods active)", n)
+    end
 end
 
 -- =========================================================
@@ -418,6 +467,24 @@ function SettingsHub:_saveLocalFile()
 end
 
 -- =========================================================
+-- Admin gate (presentation helper for the editing UIs)
+-- =========================================================
+
+-- True when the LOCAL player may change an adminOnly setting: the host
+-- (single-player or listen-server) or a granted master user on a client. This
+-- is the exact predicate the base game uses to gate admin-only actions
+-- (g_currentMission:getIsServer() or g_currentMission.isMasterUser); verified
+-- against dataS/scripts_decompiled (FSBaseMission, FarmlandManager).
+--
+-- Presentation ONLY. The server re-checks master rights on receipt in
+-- SettingsHubAdminEvent:run and is the sole authority; a client that lies here
+-- still has its admin change rejected server-side.
+function SettingsHub:isLocalAdmin()
+    if g_currentMission == nil then return false end
+    return g_currentMission:getIsServer() == true or g_currentMission.isMasterUser == true
+end
+
+-- =========================================================
 -- FarmTablet surface (read-only model for the System Settings app)
 -- =========================================================
 
@@ -482,6 +549,11 @@ function SettingsHub:onMissionLoaded()
     if self.spine ~= nil then
         self.spine:onMissionLoaded()      -- register the seven-dial difficulty profile
     end
+
+    -- Arm the one-shot suite "is running" notification: a top-right toast shown
+    -- ~25s after load (clear of the load-in), once per session, via _showWelcomeMessage.
+    self._welcomeTimer   = 25000
+    self._welcomePending = true
 end
 
 -- =========================================================

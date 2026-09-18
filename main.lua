@@ -39,6 +39,8 @@ source(modDirectory .. "src/rf/RfLiveBinding.lua")
 source(modDirectory .. "src/rf/RfActionRegistry.lua")
 source(modDirectory .. "src/rf/RfInputContextGuard.lua")
 source(modDirectory .. "src/gui/RfKeybindActionDialog.lua")
+source(modDirectory .. "src/gui/RfSettingsDialog.lua")
+source(modDirectory .. "src/rf/RfContextInput.lua")
 source(modDirectory .. "src/rf/RfControlCenterInput.lua")
 
 local settingsHub = SettingsHub.new()
@@ -55,6 +57,10 @@ local function onMissionLoad(mission)
     if mission ~= nil then
         mission.settingsHub = settingsHub
     end
+    -- RSF-F201: bind the input owner to this mission and mint fresh per-context
+    -- forwarding targets. The wrappers themselves were installed once at module
+    -- load and are never restored or reinstalled per mission.
+    RfControlCenterInput.activate(mission)
     -- Only the g_currentMission handle carries live between mod environments,
     -- so companions reach the action registry through it.
     RfActionRegistry.publish()
@@ -66,9 +72,15 @@ local function onMissionLoadedFinished()
     InGameMenuPageGuard.install()
     RfActionRegistry.publish()
     RfKeybindActionDialog.register()
+    RfSettingsDialog.register()
+    -- RSF-F201 post-load catch-up: one PLAYER reconciliation if the local owning
+    -- player and the native PLAYER context already exist. No-op when complete.
+    RfControlCenterInput.catchUp()
 end
 
 local function onMissionUpdate(mission, dt)
+    -- RSF-F201: admission reset is the first input act of every update interval.
+    RfControlCenterInput.resetAdmission()
     settingsHub:update(dt)
     InGameMenuPageGuard.update(dt)
 end
@@ -79,6 +91,9 @@ local function onMissionSave()
 end
 
 local function onMissionDelete()
+    -- RSF-F201: retire the input owner first. Old targets go inert; the captured
+    -- predecessors stay installed so no neighbour's wrapper is unhooked.
+    RfControlCenterInput.retire()
     getfenv(0)["g_settingsHub"] = nil
     if g_currentMission ~= nil then
         g_currentMission.settingsHub = nil
