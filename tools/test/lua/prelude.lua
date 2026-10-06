@@ -19,6 +19,12 @@ function Class(base)
   return mt
 end
 
+-- Network event base, enough for an event file to load (src/SettingsHubAdminEvent.lua):
+-- Event.new builds an instance on the class's metatable; InitEventClass registers nothing.
+Event = Event or {}
+function Event.new(mt) return setmetatable({}, mt) end
+function InitEventClass(_class, _name) end
+
 -- Mod environment
 g_currentModDirectory = "./"
 g_currentModName = "FS25_SettingsHub"

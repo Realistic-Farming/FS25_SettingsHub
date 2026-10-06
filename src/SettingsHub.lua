@@ -85,6 +85,30 @@ function SettingsHub:_validate(def, value)
     return nil
 end
 
+-- [MAINTENANCE row 217] A number that crossed the network did so as float32: the admin event
+-- writes a non-integer with streamWriteFloat32 (SettingsHubAdminEvent.lua) and NetworkSync
+-- broadcasts numbers the same way, so a declared 0.8 arrives as 0.800000011920929 and the
+-- exact enum check above refused it, silently. This gives such a value back as the declared
+-- option it stands for, only when it lies within float32 rounding of that option (2^-23 of its
+-- size); anything else is returned unchanged, so a value no option explains is still refused.
+SettingsHub.FLOAT32_REL = 2 ^ -23
+
+function SettingsHub:_snapNetworkValue(def, value)
+    if type(def) ~= "table" or def.type ~= "enum" or type(def.values) ~= "table" then return value end
+    if type(value) ~= "number" or value ~= value then return value end
+    local best, bestDiff = nil, nil
+    for _, option in ipairs(def.values) do
+        if type(option) == "number" then
+            local d = math.abs(option - value)
+            if d <= math.abs(option) * SettingsHub.FLOAT32_REL and (bestDiff == nil or d < bestDiff) then
+                best, bestDiff = option, d
+            end
+        end
+    end
+    if best ~= nil then return best end
+    return value
+end
+
 -- =========================================================
 -- Registration
 -- =========================================================
@@ -217,7 +241,7 @@ function SettingsHub:applyAdminChangeFromNetwork(modId, key, value)
     if mod == nil then return end
     local def = mod.defs[key]
     if def == nil then return end
-    local v = self:_validate(def, value)
+    local v = self:_validate(def, self:_snapNetworkValue(def, value))
     if v == nil then return end
 
     mod.values[key] = v
@@ -327,7 +351,7 @@ function SettingsHub:onReadState(arr)
         local modId, key, value = arr[i], arr[i + 1], arr[i + 2]
         local mod = self.modules[modId]
         if mod ~= nil and mod.defs[key] ~= nil then
-            local v = self:_validate(mod.defs[key], value)
+            local v = self:_validate(mod.defs[key], self:_snapNetworkValue(mod.defs[key], value))
             if v ~= nil and mod.values[key] ~= v then
                 mod.values[key] = v
                 self:_queue(modId, key, v, nil)
