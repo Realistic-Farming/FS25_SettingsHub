@@ -26,6 +26,25 @@ function parseDeps(src) {
   return m[1].split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+// A test may also ask for files as TEXT, not run: `--!source: main.lua, src/X.lua` puts each file's
+// contents in SOURCE_TEXT["main.lua"] (fengari has no io.open), so a test can run a file itself
+// in an environment it builds, such as a mod environment shaped like the engine's (mods.lua).
+function parseSources(src) {
+  const m = src.match(/--!source:\s*(.+)/);
+  if (!m) return [];
+  return m[1].split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+// A Lua string literal holding `text` exactly.
+function luaLiteral(text) {
+  return '"' + text
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/[\x00-\x1f]/g, (ch) => "\\" + ch.charCodeAt(0).toString().padStart(3, "0")) + '"';
+}
+
 // Run one Lua program string, return { rc, out } with stdout captured.
 function runLua(program) {
   let out = "";
@@ -66,6 +85,19 @@ for (const tf of testFiles) {
       console.log(c.red(`✗ ${tf}: cannot read declared dependency '${d}'`));
       hadError = true;
     }
+  }
+  const sources = parseSources(testSrc);
+  if (sources.length > 0) {
+    const lines = ["SOURCE_TEXT = SOURCE_TEXT or {}"];
+    for (const s of sources) {
+      try {
+        lines.push(`SOURCE_TEXT[${luaLiteral(s)}] = ${luaLiteral(readFileSync(join(REPO_ROOT, s), "utf8"))}`);
+      } catch {
+        console.log(c.red(`✗ ${tf}: cannot read declared source '${s}'`));
+        hadError = true;
+      }
+    }
+    parts.push(`-- <<< sources >>>\n` + lines.join("\n"));
   }
   parts.push(`-- <<< test: ${tf} >>>\n` + testSrc);
   parts.push("\nT.summary()\n");

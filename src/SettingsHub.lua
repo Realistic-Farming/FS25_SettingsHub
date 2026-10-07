@@ -41,7 +41,9 @@ function SettingsHub.new()
     self.savedAdmin    = {}   -- modId -> { key -> value } restored before a module registered
     self.savedLocal    = {}   -- modId -> { key -> value } from the local file
     self.localLoaded   = false
-    self.bedrockBound  = false
+    self.bedrockBound  = false    -- either handle bound (MAINTENANCE row 241: each binds on its own)
+    self.stateLedgerBound = false
+    self.networkSyncBound = false
 
     -- Admin Control Registry (API-8) rides inside the hub as an extension.
     self.registry = AdminControlRegistry.new(self)
@@ -246,9 +248,10 @@ function SettingsHub:applyAdminChangeFromNetwork(modId, key, value)
 
     mod.values[key] = v
     self:_queue(modId, key, v, nil)
-    -- Broadcast to clients via NetworkSync (server side).
-    if g_networkSync ~= nil then
-        g_networkSync:syncNow(SettingsHub.LEDGER_MODULE)
+    -- Broadcast to clients via NetworkSync (server side; the mission's handle, MAINTENANCE row 241).
+    local networkSync = SettingsHub.networkSyncHandle()
+    if networkSync ~= nil then
+        networkSync:syncNow(SettingsHub.LEDGER_MODULE)
     end
 end
 
@@ -344,6 +347,12 @@ function SettingsHub:onWriteState()
 end
 
 -- Client: apply admin values, queueing onChange only for ones that changed.
+-- [MAINTENANCE row 241] For a selfPersisted module the hub is a display mirror and live-edit forwarder
+-- only, and the companion stays the source of truth (registerModule, above): the client's hub takes the
+-- server's value so every editing UI shows it, but the companion's onChange is not called on a client.
+-- Each such companion carries its own values to its clients, and several save their own settings from
+-- onChange with no server guard (a joined client's savegameDirectory is set: JoinGameScreen.lua:630,
+-- FSCareerMissionInfo.lua:13).
 function SettingsHub:onReadState(arr)
     if type(arr) ~= "table" then return end
     local i = 1
@@ -354,7 +363,9 @@ function SettingsHub:onReadState(arr)
             local v = self:_validate(mod.defs[key], self:_snapNetworkValue(mod.defs[key], value))
             if v ~= nil and mod.values[key] ~= v then
                 mod.values[key] = v
-                self:_queue(modId, key, v, nil)
+                if not mod.selfPersisted then
+                    self:_queue(modId, key, v, nil)
+                end
             end
         end
         i = i + 3
@@ -384,10 +395,15 @@ end
 function SettingsHub:deserializeAdmin(data)
     -- May arrive before companions register; stash and also apply to any
     -- already-registered module.
+    -- [MAINTENANCE row 241] Except a selfPersisted one: it loaded its own value before it registered
+    -- and stays its own source of truth (registerModule skips the restore for it). StateLedger delivers
+    -- at loadMission00Finished, after the companions registered at Mission00.load, so without this the
+    -- hub's stored copy, a mirror that can lag the companion's own settings UI, would overwrite the
+    -- real value on every load.
     self.savedAdmin = data or {}
     for modId, block in pairs(self.savedAdmin) do
         local mod = self.modules[modId]
-        if mod ~= nil then
+        if mod ~= nil and not mod.selfPersisted then
             for key, value in pairs(block) do
                 local def = mod.defs[key]
                 if def ~= nil and def.adminOnly then
@@ -402,25 +418,42 @@ function SettingsHub:deserializeAdmin(data)
     end
 end
 
--- Bind to the bedrock mods once (idempotent). Safe if they are absent.
+-- [MAINTENANCE row 241] The bedrock handles. Each bedrock mod writes its handle into its OWN mod
+-- environment (getfenv(0); the engine gives every mod its own table, mods.lua:482-505) and onto the
+-- mission (NetworkSync main.lua:87, StateLedger main.lua:46). Only the mission crosses between mod
+-- environments, so a bare g_networkSync / g_stateLedger read here is nil in a game: the mission comes
+-- first, the bare global second.
+function SettingsHub.networkSyncHandle()
+    local mission = g_currentMission
+    return (mission ~= nil and mission.networkSync) or g_networkSync
+end
+
+function SettingsHub.stateLedgerHandle()
+    local mission = g_currentMission
+    return (mission ~= nil and mission.stateLedger) or g_stateLedger
+end
+
+-- Bind to each bedrock mod once (idempotent). Safe if they are absent. Each handle binds on its own:
+-- one found first never locks the other out (a later call binds it when it appears).
 function SettingsHub:_bindBedrock()
-    if self.bedrockBound then return end
-    if g_stateLedger ~= nil then
-        g_stateLedger:registerModule(SettingsHub.LEDGER_MODULE, {
+    local stateLedger = SettingsHub.stateLedgerHandle()
+    if not self.stateLedgerBound and stateLedger ~= nil then
+        stateLedger:registerModule(SettingsHub.LEDGER_MODULE, {
             serialize   = function() return self:serializeAdmin() end,
             deserialize = function(data) self:deserializeAdmin(data) end,
         })
+        self.stateLedgerBound = true
     end
-    if g_networkSync ~= nil then
-        g_networkSync:registerModule(SettingsHub.LEDGER_MODULE, {
+    local networkSync = SettingsHub.networkSyncHandle()
+    if not self.networkSyncBound and networkSync ~= nil then
+        networkSync:registerModule(SettingsHub.LEDGER_MODULE, {
             channel      = "SettingsHub_Sync",
             onWriteState = function() return self:onWriteState() end,
             onReadState  = function(arr) self:onReadState(arr) end,
         })
+        self.networkSyncBound = true
     end
-    if g_stateLedger ~= nil or g_networkSync ~= nil then
-        self.bedrockBound = true
-    end
+    self.bedrockBound = self.stateLedgerBound == true or self.networkSyncBound == true
 end
 
 -- =========================================================
@@ -600,8 +633,8 @@ end
 
 function SettingsHub:consoleCommandStatus()
     local lines = {}
-    table.insert(lines, string.format("SettingsHub: %d module(s), %d queued, bedrock=%s",
-        #self.registerOrder, #self.pending, tostring(self.bedrockBound)))
+    table.insert(lines, string.format("SettingsHub: %d module(s), %d queued, StateLedger=%s, NetworkSync=%s",
+        #self.registerOrder, #self.pending, tostring(self.stateLedgerBound == true), tostring(self.networkSyncBound == true)))
     for _, modId in ipairs(self.registerOrder) do
         local mod = self.modules[modId]
         table.insert(lines, string.format("  %s (%d setting(s))", modId, #mod.order))
