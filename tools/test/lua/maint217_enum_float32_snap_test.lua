@@ -94,12 +94,15 @@ end
 -- ══════════════════════════════════════════════════════════════════════════
 local SYNCS = 0
 local function server()
+    SYNCS = 0
+    -- MAINTENANCE row 241: NetworkSync's handle is on the mission only (NetworkSync main.lua:87), as in a
+    -- game, where a bare g_networkSync lives in NetworkSync's own mod environment. Nothing is a global.
+    g_networkSync, g_stateLedger = nil, nil
+    g_currentMission = { getIsServer = function() return true end,
+                         userManager = { getUserByConnection = function(_, c) return c.user end },
+                         networkSync = { syncNow = function() SYNCS = SYNCS + 1 end, registerModule = function() end } }
     local hub, ok = hubWith()
     g_settingsHub = hub
-    SYNCS = 0
-    g_networkSync = { syncNow = function() SYNCS = SYNCS + 1 end, registerModule = function() end }
-    g_currentMission = { getIsServer = function() return true end,
-                         userManager = { getUserByConnection = function(_, c) return c.user end } }
     return hub, ok
 end
 local ADMIN = { getIsServer = function() return false end, user = { getIsMasterUser = function() return true end } }
@@ -185,11 +188,14 @@ end
 group("C", function()
     local host = server()
     -- NetworkSync is present before the client hub's first registerModule, which binds the hub
-    -- (registerModule ends in _bindBedrock, src/SettingsHub.lua:179; idempotent after that).
+    -- (registerModule ends in _bindBedrock, src/SettingsHub.lua:181; idempotent after that). The client
+    -- machine's handle is on its own mission only (MAINTENANCE row 241).
     local REG = {}
-    g_stateLedger = nil
-    g_networkSync = { registerModule = function(_, name, spec) REG[name] = spec end, syncNow = function() SYNCS = SYNCS + 1 end }
+    local hostMission = g_currentMission
+    g_currentMission = { getIsServer = function() return false end,
+                         networkSync = { registerModule = function(_, name, spec) REG[name] = spec end, syncNow = function() SYNCS = SYNCS + 1 end } }
     local client = hubWith()
+    g_currentMission = hostMission
     local cbase = queuedCount(client, "rate")
     local spec = REG[SettingsHub.LEDGER_MODULE]
     T.ok("C0 [entry point] the client hub registered itself on NetworkSync through its own registerModule and _bindBedrock, on its channel",
