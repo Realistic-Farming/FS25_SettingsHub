@@ -1,6 +1,7 @@
 # MAINTENANCE row 241 mutation battery: SettingsHub reaches NetworkSync and StateLedger through the mission
 # (src/SettingsHub.lua: networkSyncHandle, stateLedgerHandle, _bindBedrock, applyAdminChangeFromNetwork's
-# broadcast, deserializeAdmin's selfPersisted skip, onReadState's selfPersisted mirror (Desk's option A);
+# broadcast, deserializeAdmin's selfPersisted skip, onReadState's selfPersisted mirror (Desk's option A),
+# onWriteState's nil guard (Bob's R-15 MAJOR);
 # src/AdminControlRegistry.lua: networkSyncHandle, bindNetwork, invoke). Rows live in
 # tools/test/lua/maint241_bedrock_binding_test.lua.
 #
@@ -70,6 +71,9 @@ MUTATIONS = [
   [("                if not mod.selfPersisted then\n                    self:_queue(modId, key, v, nil)\n                end\n",
     "                self:_queue(modId, key, v, nil)\n", 1)],
   "a client calls a selfPersisted companion's onChange, against the hub's mirror contract (Desk's option A; A2)"),
+ ("M10-nil-triplet-written", HUB,
+  [("            if mod.defs[id].adminOnly and mod.values[id] ~= nil then\n", "            if mod.defs[id].adminOnly then\n", 1)],
+  "a nil admin value leaves a hole that shifts every later triplet (Bob's R-15 MAJOR; N1)"),
 ]
 
 

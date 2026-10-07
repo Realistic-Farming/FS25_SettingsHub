@@ -331,12 +331,15 @@ end
 -- =========================================================
 
 -- Server: flatten every adminOnly value into [modId, key, value, ...].
+-- [MAINTENANCE row 241, Bob's R-15] The array is positional triplets: a nil value would append nothing
+-- and shift every later triplet, so the client would refuse every module after it. A nil value has
+-- nothing to carry, so its triplet is left out.
 function SettingsHub:onWriteState()
     local arr = {}
     for _, modId in ipairs(self.registerOrder) do
         local mod = self.modules[modId]
         for _, id in ipairs(mod.order) do
-            if mod.defs[id].adminOnly then
+            if mod.defs[id].adminOnly and mod.values[id] ~= nil then
                 arr[#arr + 1] = modId
                 arr[#arr + 1] = id
                 arr[#arr + 1] = mod.values[id]

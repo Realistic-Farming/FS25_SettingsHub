@@ -33,8 +33,9 @@
 --   A  a client admin's change: the event, the server's apply and broadcast, the client's value; a
 --      selfPersisted companion's onChange runs on the server only (Desk's option A)
 --   C  a registrant that is not selfPersisted gets its onChange on a client through onReadState
---   P  StateLedger persistence: a relaunch restores the non-selfPersisted modules (a companion, the
---      Spine, the registry's flag) and never clobbers a selfPersisted companion's own value (Desk's (b))
+--   N  a module whose admin value is nil leaves no hole in the broadcast (Bob's R-15 MAJOR)
+--   P  StateLedger persistence: a relaunch restores the non-selfPersisted modules (a hub-persisted
+--      companion, the Spine, the registry's flag) and never clobbers a selfPersisted companion's own value
 --   R  the registry's client invoke reaches the owning mod's setter on the server (Desk's (c))
 --   B  each handle binds on its own: StateLedger first never locks NetworkSync out
 --
@@ -252,15 +253,21 @@ local function newNetworkSync()
 end
 
 -- ── the companions (registered through mission.settingsHub at Mission00.load, after mod 4) ──────
-local DEPOT, CROP, REGMOD = "FS25_DepotBench", "FS25_CropStressBench", "FS25_RegistryBench"
+local DEPOT, CROP, REGMOD, NILMOD = "FS25_DepotBench", "FS25_HubPersistedBench", "FS25_RegistryBench", "FS25_NilBench"
 local function companionSpecs(machine)
     local calls = machine.calls
     local function spy(modId) return function(key, value) calls[#calls + 1] = modId .. "." .. key .. "=" .. tostring(value) end end
-    return {
+    local specs = {}
+    if machine.nilFirst then
+        -- An admin setting with no default: its value is nil until set (registerModule, :137).
+        specs[1] = { NILMOD, { onChange = spy(NILMOD), adminSettings = { { id = "unset", type = "float", adminOnly = true } } } }
+    end
+    local list = {
         -- FertilizerDepot's shape: selfPersisted, its own file holds sellRatio (DepotSettingsHubBridge.lua).
         { DEPOT, { selfPersisted = true, onChange = spy(DEPOT), adminSettings = {
             { id = "sellRatio", type = "enum", values = { 0.7, 0.8, 0.9 }, default = machine.depotOwn or 0.8, adminOnly = true } } } },
-        -- SeasonalCropStress's bridge shape: not selfPersisted, the hub owns persistence.
+        -- A companion that does not persist its own settings: no selfPersisted flag, so the hub owns its
+        -- persistence and calls its onChange on clients (as the hub's own Spine and registry flag).
         { CROP, { onChange = spy(CROP), adminSettings = {
             { id = "waterScale", type = "float", min = 0, max = 2, default = 1, adminOnly = true },
             { id = "mode", type = "enum", values = { 0, 1, 2 }, default = 0, adminOnly = true } } } },
@@ -270,14 +277,17 @@ local function companionSpecs(machine)
               valueBinding = { valueId = "x", default = false,
                                setter = function(v, ctx) machine.setter[#machine.setter + 1] = tostring(v) .. "/" .. tostring(ctx.userId) .. "/" .. tostring(ctx.isAdmin) end } } } } },
     }
+    for _, s in ipairs(list) do specs[#specs + 1] = s end
+    return specs
 end
 
 --- One machine. kind: "server" or "client". opts.admin (client master user), opts.dir (savegame),
 --- opts.depotOwn (the depot's own saved value), opts.ns / opts.sl (false: that mod not installed),
+--- opts.nilFirst (a module whose admin value is nil registers first),
 --- opts.lateNs (NetworkSync's handle appears only at loadMission00Finished).
 local function newMachine(kind, opts)
     opts = opts or {}
-    local m = { kind = kind, calls = {}, setter = {}, depotOwn = opts.depotOwn, users = {} }
+    local m = { kind = kind, calls = {}, setter = {}, depotOwn = opts.depotOwn, users = {}, nilFirst = opts.nilFirst }
     Mission00, FSBaseMission, FSCareerMissionInfo = {}, {}, { saveToXMLFile = function() end }
     m.classes = { Mission00 = Mission00, FSBaseMission = FSBaseMission, FSCareerMissionInfo = FSCareerMissionInfo }
     m.sl = opts.sl ~= false and newStateLedger() or nil
@@ -442,11 +452,29 @@ group("C", function()
     tick(client)
     T.eq("C1 [entry point] a host admin's changes reach the client's hub (1.35 as float32 carries it, 2 exactly) and each changed setting's onChange runs on the client, once",
         tostring(exact(hubOf(client):getValue(CROP, "waterScale"), f32(1.35))) .. "/" .. tostring(hubOf(client):getValue(CROP, "mode")) .. "|" .. callsSince(client, c0),
-        "true/2|" .. "FS25_CropStressBench.waterScale=" .. tostring(f32(1.35)) .. ",FS25_CropStressBench.mode=2")
+        "true/2|" .. "FS25_HubPersistedBench.waterScale=" .. tostring(f32(1.35)) .. ",FS25_HubPersistedBench.mode=2")
     local c1 = mark(client)
     on(server, function() server.ns:syncNow(server.env.SettingsHub.LEDGER_MODULE) end)
     tick(client)
     T.eq("C2 the same values again change nothing on the client and run no onChange", callsSince(client, c1), "")
+end)
+
+-- ══════════════════════════════════════════════════════════════════════════
+-- N. A NIL ADMIN VALUE LEAVES NO HOLE IN THE BROADCAST (Bob's R-15 MAJOR)
+-- ══════════════════════════════════════════════════════════════════════════
+group("N", function()
+    -- onWriteState's array is positional triplets; a nil value used to append nothing and shift every
+    -- later triplet, so onReadState refused every module after it. Dead while nothing broadcast; live now.
+    local server = newMachine("server", { dir = "n1", nilFirst = true })
+    local client = newMachine("client", { admin = false, nilFirst = true })
+    connect(client, server, 9, false)
+    boot(server) boot(client)
+    tick(server) tick(client)
+    on(server, function() hubOf(server):setValue(CROP, "mode", 2) end)
+    tick(client)
+    local frame = on(server, function() return hubOf(server):onWriteState() end)
+    T.eq("N1 NAMED: with a nil-valued module registered first, the broadcast stays whole triplets and the later module's value still reaches the client",
+        (#frame % 3) .. "/" .. tostring(frame[1] ~= NILMOD) .. "/" .. tostring(hubOf(client):getValue(CROP, "mode")), "0/true/2")
 end)
 
 -- ══════════════════════════════════════════════════════════════════════════
@@ -476,9 +504,9 @@ group("P", function()
     boot(again)
     tick(again, 40)
     local hub = hubOf(again)
-    T.eq("P2 NAMED (Desk's (b)): the relaunch restores the non-selfPersisted modules: the companion's mode, the Spine's dial and the registry's creative flag, and the companion's onChange applies its restored value",
+    T.eq("P2 NAMED (Desk's (b)): the relaunch restores the non-selfPersisted modules: the hub-persisted companion's mode, the Spine's dial and the registry's creative flag, and the companion's onChange applies its restored value",
         tostring(hub:getValue(CROP, "mode")) .. "/" .. tostring(hub:getValue(SPINE, DIAL)) .. "/" .. tostring(hub.registry:isCreativeWorld()) .. "|" .. callsOf(again, CROP .. ".mode"),
-        "2/1.25/true|FS25_CropStressBench.mode=0,FS25_CropStressBench.mode=2")
+        "2/1.25/true|FS25_HubPersistedBench.mode=0,FS25_HubPersistedBench.mode=2")
     T.eq("P3 NAMED: the selfPersisted depot keeps its own 0.7; the hub's stored 0.9 never clobbers it, and no restore replays through its onChange",
         tostring(exact(hub:getValue(DEPOT, "sellRatio"), 0.7)) .. "|" .. callsOf(again, DEPOT), "true|")
 end)
