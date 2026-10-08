@@ -4,7 +4,7 @@
 #
 # TARGETED (Tyson, 2026-09-25 and 2026-09-26, R-25a): the lines this PR changes, Bob's four (the server-only
 # gate, the republish, the snap, the in-flight preference) plus the three reads the Tablet and the broadcast
-# go through and the log-once. Targeted runs only (Tyson, 2026-09-30): each mutant runs SELECTED, this PR's
+# go through, the log-once, and the false-dropping form #26 first shipped (Sasha's catch). Targeted runs only (Tyson, 2026-09-30): each mutant runs SELECTED, this PR's
 # bench, the one whose companions pass a reader; the two other benches that load the hub (maint217,
 # maint241) ran once, unmutated, as the PR's selection baseline. This repo's runner has no selection, so the
 # script writes a filtered copy of run-tests.mjs beside it for the run and deletes it after. Run ONE mutant
@@ -58,9 +58,13 @@ MUTATIONS = [
     "                id = id, type = def.type, value = mod.values[id], default = def.default,\n", 1)],
   "the Tablet's list shows the mirror, as before (S1, L1)"),
  ("M06-broadcast-mirror", HUB,
-  [("            local v = mod.defs[id].adminOnly and self:_shownValue(modId, id) or nil\n",
-    "            local v = mod.defs[id].adminOnly and mod.values[id] or nil\n", 1)],
+  [("            if mod.defs[id].adminOnly then v = self:_shownValue(modId, id) end\n",
+    "            if mod.defs[id].adminOnly then v = mod.values[id] end\n", 1)],
   "the broadcast sends the mirror, so clients never get the companion's value (S3)"),
+ ("M08-false-dropped", HUB,
+  [("            local v = nil\n            if mod.defs[id].adminOnly then v = self:_shownValue(modId, id) end\n",
+    "            local v = mod.defs[id].adminOnly and self:_shownValue(modId, id) or nil\n", 1)],
+  "the `and ... or nil` form #26 first shipped: an admin bool at false is never broadcast (B1, B2, B3)"),
  ("M07-log-every-read", HUB,
   [("        if not self.readWarned[tag] then\n", "        if true then\n", 1)],
   "a failing read logs on every read, flooding the log while the Tablet draws (F2)"),

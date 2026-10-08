@@ -407,7 +407,9 @@ function SettingsHub:onWriteState()
         local mod = self.modules[modId]
         local sent = {}
         for _, id in ipairs(mod.order) do
-            local v = mod.defs[id].adminOnly and self:_shownValue(modId, id) or nil
+            -- An explicit branch, not `and ... or nil`: a shown false must still be sent (Sasha's catch on #26).
+            local v = nil
+            if mod.defs[id].adminOnly then v = self:_shownValue(modId, id) end
             if v ~= nil then
                 arr[#arr + 1] = modId
                 arr[#arr + 1] = id

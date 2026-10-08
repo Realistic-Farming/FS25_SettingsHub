@@ -29,6 +29,8 @@
 --   F  a read that fails validation shows the mirror and logs once
 --   N  a module without a reader behaves as before
 --   D  a change in flight is not stepped from the companion's not-yet-applied value
+--   B  an admin bool at false is broadcast like any value, readers or not, and a reader's false does not
+--      republish every second (Sasha's catch on #26: `x and v or nil` turned false into nil)
 --
 --!source: main.lua, src/Logger.lua, src/SettingsHubAdminEvent.lua, src/AdminControlRegistry.lua, src/OptionScalingResolver.lua, src/OptionScalingSpine.lua, src/SettingsHub.lua, src/InGameMenuPageGuard.lua, src/rf/RfLiveBinding.lua, src/rf/RfActionRegistry.lua, src/rf/RfInputContextGuard.lua, src/gui/RfKeybindActionDialog.lua, src/gui/RfSettingsDialog.lua, src/rf/RfContextInput.lua, src/rf/RfControlCenterInput.lua
 
@@ -258,10 +260,12 @@ local function companionSpecs(machine)
         -- FertilizerDepot's shape: its sellRatio comes from xmlFile:getFloat, so it is float32-inexact.
         { DEPOT, { selfPersisted = true, onChange = owner(DEPOT), read = reader(DEPOT), adminSettings = {
             { id = "sellRatio", type = "enum", values = ENUM, default = own[DEPOT].sellRatio, adminOnly = true },
-            { id = "showHud", type = "bool", default = own[DEPOT].showHud, adminOnly = false } } } },
+            { id = "showHud", type = "bool", default = own[DEPOT].showHud, adminOnly = false },
+            { id = "seasonal", type = "bool", default = own[DEPOT].seasonal, adminOnly = true } } } },
         -- A selfPersisted companion that passes no reader: the hub shows its mirror, as before.
         { PLAIN, { selfPersisted = true, onChange = owner(PLAIN), adminSettings = {
-            { id = "sellRatio", type = "enum", values = ENUM, default = own[PLAIN].sellRatio, adminOnly = true } } } },
+            { id = "sellRatio", type = "enum", values = ENUM, default = own[PLAIN].sellRatio, adminOnly = true },
+            { id = "enabled", type = "bool", default = own[PLAIN].enabled, adminOnly = true } } } },
         -- A reader that answers a value no option explains.
         { BAD, { selfPersisted = true, onChange = owner(BAD), read = function() return 0.75 end, adminSettings = {
             { id = "sellRatio", type = "enum", values = ENUM, default = 0.8, adminOnly = true } } } },
@@ -275,7 +279,8 @@ end
 local function newMachine(kind, opts)
     opts = opts or {}
     local m = { kind = kind, calls = {}, setter = {}, depotOwn = opts.depotOwn, users = {}, nilFirst = opts.nilFirst,
-                own = { ["FS25_DepotBench"] = { sellRatio = F32_08, showHud = true }, ["FS25_PlainBench"] = { sellRatio = 0.8 },
+                own = { ["FS25_DepotBench"] = { sellRatio = F32_08, showHud = true, seasonal = true },
+                        ["FS25_PlainBench"] = { sellRatio = 0.8, enabled = true },
                         ["FS25_BadReadBench"] = {} } }
     Mission00, FSBaseMission, FSCareerMissionInfo = {}, {}, { saveToXMLFile = function() end }
     m.classes = { Mission00 = Mission00, FSBaseMission = FSBaseMission, FSCareerMissionInfo = FSCareerMissionInfo }
@@ -453,4 +458,23 @@ group("D", function()
     tick(server, 2)
     T.eq("D2 once the queue applied it, the companion holds 0.7 and the hub reads it from the companion",
         tostring(exact(server.own[DEPOT].sellRatio, 0.7)) .. "/" .. tostring(exact(shown(server, DEPOT, "sellRatio"), 0.7)), "true/true")
+end)
+
+group("B", function()
+    local server, client = world()
+    -- A module without a reader: the host switches an admin bool off through the hub.
+    on(server, function() hubOf(server):setValue(PLAIN, "enabled", false) end)
+    tick(server, 2) tick(client, 2)
+    T.eq("B1 a module without a reader: an admin bool switched off on the host reaches the client's Tablet as false",
+        tostring(shown(client, PLAIN, "enabled")), "false")
+    -- A reader module: the depot's own dialog switches an admin bool off on the server.
+    server.own[DEPOT].seasonal = false
+    tick(server, 70)
+    T.eq("B2 a reader module: an admin bool switched off outside the hub is in the broadcast and reaches the client as false",
+        tostring(shown(client, DEPOT, "seasonal")) .. "/" .. tostring(sentKeys(server):find(DEPOT .. ".seasonal", 1, true) ~= nil),
+        "false/true")
+    local syncs = server.ns.syncs
+    tick(server, 250)   -- four more seconds of republish checks
+    T.eq("B3 and with nothing moving, the republish sends nothing more (a false is not read as moved every second)",
+        server.ns.syncs - syncs, 0)
 end)
