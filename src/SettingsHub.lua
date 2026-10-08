@@ -12,6 +12,8 @@
 --   g_settingsHub:registerModule(modId, {
 --       adminSettings = { { id, type, default, adminOnly, min, max, step, values, label }, ... },
 --       onChange      = function(key, value, playerId) ... end,
+--       selfPersisted = true,                       -- optional: the companion owns its own save
+--       read          = function(key) return v end, -- optional, selfPersisted only: its live value
 --   })
 --   g_settingsHub:getValue(modId, key)
 --   g_settingsHub:setValue(modId, key, value, playerId)   -- from the UI
@@ -31,6 +33,7 @@ local SettingsHub_mt = Class(SettingsHub)
 SettingsHub.MAX_PER_FRAME = 2
 SettingsHub.LOCAL_FILE    = "FS25_SettingsHub_local.xml"
 SettingsHub.LEDGER_MODULE = "FS25_SettingsHub"
+SettingsHub.REPUBLISH_MS  = 1000   -- [MAINTENANCE row 258] at most one read-moved check a second
 
 function SettingsHub.new()
     local self = setmetatable({}, SettingsHub_mt)
@@ -44,6 +47,9 @@ function SettingsHub.new()
     self.bedrockBound  = false    -- either handle bound (MAINTENANCE row 241: each binds on its own)
     self.stateLedgerBound = false
     self.networkSyncBound = false
+    self.readWarned       = {}   -- [MAINTENANCE row 258] "modId.key" -> true once a failing read logged
+    self.published        = {}   -- modId -> { key -> admin value last sent by onWriteState }
+    self.republishTimer   = 0
 
     -- Admin Control Registry (API-8) rides inside the hub as an extension.
     self.registry = AdminControlRegistry.new(self)
@@ -129,8 +135,11 @@ function SettingsHub:registerModule(modId, spec)
     -- on load - doing so clobbered the companion's real setting every load (the
     -- SoilFertilizer master `enabled` reset-to-false bug). The hub then acts as a
     -- display mirror + live-edit forwarder only; the companion remains source of truth.
+    -- [MAINTENANCE row 258] A selfPersisted companion may also pass read(key), its live value; the hub then
+    -- shows that instead of its own mirror (_shownValue). Ignored for a module the hub persists itself.
     local mod = { order = {}, defs = {}, values = {}, onChange = spec.onChange,
                   selfPersisted = spec.selfPersisted == true }
+    if mod.selfPersisted and type(spec.read) == "function" then mod.read = spec.read end
     for _, def in ipairs(spec.adminSettings) do
         if type(def) == "table" and type(def.id) == "string" then
             def.adminOnly = def.adminOnly == true
@@ -190,9 +199,51 @@ end
 function SettingsHub:getValue(modId, key)
     local mod = self.modules[modId]
     if mod == nil then return nil end
-    if mod.values[key] ~= nil then return mod.values[key] end
+    local shown = self:_shownValue(modId, key)
+    if shown ~= nil then return shown end
     local def = mod.defs[key]
     return def ~= nil and def.default or nil
+end
+
+-- [MAINTENANCE row 258] What the hub shows for a key. A selfPersisted companion that passed read(key) is
+-- asked for its live value, so a change made in its own UI (a dialog, a console command, its own MP event)
+-- shows here without the companion telling the hub. Where that truth lives (Bob's R-15): an admin key on
+-- the server only, since a client's companion may hold a stale copy (some send no settings to clients),
+-- so a client keeps the mirror the server's broadcast fills; a player-local key on its own machine. The
+-- value is snapped and validated like any value that reaches the hub; one that fails shows the mirror and
+-- logs once. A key with a change still queued shows the mirror too, so a quick double press steps from the
+-- value just set, not from the companion's not-yet-applied one.
+function SettingsHub:_isServer()
+    return g_currentMission ~= nil and g_currentMission.getIsServer ~= nil and g_currentMission:getIsServer() == true
+end
+
+function SettingsHub:_hasPending(modId, key)
+    for _, item in ipairs(self.pending) do
+        if item.modId == modId and item.key == key then return true end
+    end
+    return false
+end
+
+function SettingsHub:_shownValue(modId, key)
+    local mod = self.modules[modId]
+    if mod == nil then return nil end
+    local def = mod.defs[key]
+    local mirror = mod.values[key]
+    if mod.read == nil or def == nil then return mirror end
+    if def.adminOnly and not self:_isServer() then return mirror end
+    if self:_hasPending(modId, key) then return mirror end
+    local ok, raw = pcall(mod.read, key)
+    local v = nil
+    if ok and raw ~= nil then v = self:_validate(def, self:_snapNetworkValue(def, raw)) end
+    if v == nil then
+        local tag = modId .. "." .. key
+        if not self.readWarned[tag] then
+            self.readWarned[tag] = true
+            SHLogger.warning("read('%s','%s') gave no valid value (%s); showing the hub's copy", modId, key, tostring(raw))
+        end
+        return mirror
+    end
+    return v
 end
 
 -- UI entry point. Validates, then routes by scope.
@@ -276,6 +327,20 @@ function SettingsHub:update(dt)
         processed = processed + 1
     end
 
+    -- [MAINTENANCE row 258] Republish. On the server, at most once a second, when a reader's admin value has
+    -- moved since the hub last sent its state (a change made in the companion's own UI), send it now instead
+    -- of waiting for NetworkSync's 30 s drift floor, so every client's Tablet follows within a second.
+    if self.networkSyncBound and self:_isServer() then
+        self.republishTimer = self.republishTimer + (dt or 0)
+        if self.republishTimer >= SettingsHub.REPUBLISH_MS then
+            self.republishTimer = 0
+            if self:_readMoved() then
+                local networkSync = SettingsHub.networkSyncHandle()
+                if networkSync ~= nil then networkSync:syncNow(SettingsHub.LEDGER_MODULE) end
+            end
+        end
+    end
+
     -- One-shot "suite is active" welcome message, a few seconds after load.
     if self._welcomePending then
         self._welcomeTimer = (self._welcomeTimer or 0) - dt
@@ -334,19 +399,42 @@ end
 -- [MAINTENANCE row 241, Bob's R-15] The array is positional triplets: a nil value would append nothing
 -- and shift every later triplet, so the client would refuse every module after it. A nil value has
 -- nothing to carry, so its triplet is left out.
+-- [MAINTENANCE row 258] The server sends what it shows: a reader's live admin value where one is passed
+-- (_shownValue), and records it, so the republish check knows what clients last received.
 function SettingsHub:onWriteState()
     local arr = {}
     for _, modId in ipairs(self.registerOrder) do
         local mod = self.modules[modId]
+        local sent = {}
         for _, id in ipairs(mod.order) do
-            if mod.defs[id].adminOnly and mod.values[id] ~= nil then
+            local v = mod.defs[id].adminOnly and self:_shownValue(modId, id) or nil
+            if v ~= nil then
                 arr[#arr + 1] = modId
                 arr[#arr + 1] = id
-                arr[#arr + 1] = mod.values[id]
+                arr[#arr + 1] = v
+                sent[id] = v
+            end
+        end
+        self.published[modId] = sent
+    end
+    return arr
+end
+
+-- [MAINTENANCE row 258] True when a reader's admin value differs from what the hub last sent.
+function SettingsHub:_readMoved()
+    for _, modId in ipairs(self.registerOrder) do
+        local mod = self.modules[modId]
+        if mod.read ~= nil then
+            local sent = self.published[modId]
+            for _, id in ipairs(mod.order) do
+                if mod.defs[id].adminOnly then
+                    local v = self:_shownValue(modId, id)
+                    if v ~= nil and (sent == nil or sent[id] ~= v) then return true end
+                end
             end
         end
     end
-    return arr
+    return false
 end
 
 -- Client: apply admin values, queueing onChange only for ones that changed.
@@ -559,7 +647,7 @@ function SettingsHub:getModules()
         for _, id in ipairs(mod.order) do
             local def = mod.defs[id]
             settings[#settings + 1] = {
-                id = id, type = def.type, value = mod.values[id], default = def.default,
+                id = id, type = def.type, value = self:_shownValue(modId, id), default = def.default,
                 adminOnly = def.adminOnly, min = def.min, max = def.max, step = def.step,
                 values = def.values, label = def.label,
             }
