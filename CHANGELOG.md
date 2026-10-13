@@ -13,6 +13,17 @@ the repo's git history and README.
 
 ## [Unreleased]
 
+## [1.2.0.0] - 2026-10-12
+
+> **This is not a final release.** It gives everyone, testers and players, new or returning, everything we have built so far, so nobody has to wait on an old version any longer. The Realistic Farming suite is far from done: we are still building and expanding every mod, and completing it could take months, possibly a year. Expect changes and rough edges along the way, and please report anything that looks wrong.
+
+### Fixed
+- Multiplayer: admin settings changed from a client now come back to that client and reach every other client, and the settings Settings Hub keeps itself survive a save and reload. The Sell Price Ratio arrows step again.
+- Multiplayer: an admin setting with options such as 0.6, 0.7, 0.8 or 0.9 (for example Fertilizer Depot's Sell Price Ratio) now applies when a client admin changes it, and reaches every client when the host changes it. Before, the change was dropped without a message.
+
+### Added
+- Settings Hub can show a companion mod's own live setting, so a change made in that mod's own settings dialog appears in the Farm Tablet's System Settings on every player's screen within a second. Each companion opts in with its own update (Soil & Fertilizer does in this release wave).
+
 ## [1.1.0.0] - 2026-09-18
 
 ### Added
