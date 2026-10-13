@@ -297,9 +297,17 @@ end
 -- registry performs its OWN two-gate check per control; NetworkSync's blanket
 -- admin gate would refuse Creative-farm, Recovery and Diagnostic controls that
 -- correctly need no admin rights.
+-- [MAINTENANCE row 241] NetworkSync's handle: the mission's first (NetworkSync main.lua:87), since a
+-- bare g_networkSync lives in NetworkSync's own mod environment (mods.lua:482-505) and reads nil here.
+function AdminControlRegistry.networkSyncHandle()
+    local mission = g_currentMission
+    return (mission ~= nil and mission.networkSync) or g_networkSync
+end
+
 function AdminControlRegistry:bindNetwork()
-    if self.actionBound or g_networkSync == nil then return end
-    local ok = g_networkSync:registerAction(AdminControlRegistry.ACTION_ID, {
+    local networkSync = AdminControlRegistry.networkSyncHandle()
+    if self.actionBound or networkSync == nil then return end
+    local ok = networkSync:registerAction(AdminControlRegistry.ACTION_ID, {
         adminOnly = false,
         onAction  = function(userId, args) self:_applyInvoke(args, userId) end,
     })
@@ -319,10 +327,11 @@ function AdminControlRegistry:invoke(modId, controlId, value, targetFarmId)
     local args = { tostring(modId), tostring(controlId), valueTag, wireValue,
                    (type(targetFarmId) == "number" and targetFarmId) or 0 }
 
-    if g_networkSync ~= nil then
+    local networkSync = AdminControlRegistry.networkSyncHandle()
+    if networkSync ~= nil then
         -- requestAction applies directly on a host (connection nil) and sends an
         -- event on a client. Server authority is enforced in _applyInvoke either way.
-        g_networkSync:requestAction(AdminControlRegistry.ACTION_ID, args)
+        networkSync:requestAction(AdminControlRegistry.ACTION_ID, args)
     elseif g_currentMission ~= nil and g_currentMission:getIsServer() then
         self:_applyInvoke(args, nil)   -- NetworkSync absent but we are the server
     end
@@ -408,7 +417,7 @@ end
 
 function AdminControlRegistry:onMissionLoaded()
     self:_registerFlagModule()   -- needs g_i18n + SettingsHub alive
-    self:bindNetwork()           -- needs g_networkSync
+    self:bindNetwork()           -- needs NetworkSync's handle (the mission's)
 end
 
 function AdminControlRegistry:consoleCommandStatus()
